@@ -20,7 +20,47 @@ function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function getWeekRange(date = new Date()) {
+  const current = new Date(date);
+  const day = current.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+
+  const monday = new Date(current);
+  monday.setDate(current.getDate() + diffToMonday);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  return {
+    start: monday.toISOString().slice(0, 10),
+    end: sunday.toISOString().slice(0, 10),
+  };
+}
+
+function getMaxTenisDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 2);
+  return date.toISOString().slice(0, 10);
+}
+
+function isDateAllowed(courtId, dateText) {
+  const today = getToday();
+
+  if (courtId === "tenis") {
+    return dateText >= today && dateText <= getMaxTenisDate();
+  }
+
+  if (courtId === "salon") {
+    const week = getWeekRange();
+    return dateText >= week.start && dateText <= week.end;
+  }
+
+  return true;
+}
+
 function getTenisDayType(date, time) {
+  if (!date || !time) return "";
+
   const monthDay = date.slice(5);
   const hour = Number(time.slice(0, 2));
   const summer = monthDay >= "06-01" && monthDay <= "10-01";
@@ -32,22 +72,8 @@ function getTenisDayType(date, time) {
   return hour >= 8 && hour <= 17 ? "gunduz" : "gece";
 }
 
-function isTimeClosed(hour, slot) {
-  const h = Number(hour.slice(0, 2));
-  const start = Number(slot.start_time.slice(0, 2));
-  const end = Number(slot.end_time.slice(0, 2));
-
-  if (start < end) {
-    return h >= start && h < end;
-  }
-
-  return h >= start || h < end;
-}
-
 function App() {
   const [reservations, setReservations] = useState([]);
-  const [closedSlots, setClosedSlots] = useState([]);
-
   const [selectedCourt, setSelectedCourt] = useState("salon");
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [selectedTime, setSelectedTime] = useState("");
@@ -58,16 +84,12 @@ function App() {
 
   const [volleyLicense, setVolleyLicense] = useState("lisanssiz");
   const [tennisCategory, setTennisCategory] = useState("yetiskin");
+
   const [receiptFile, setReceiptFile] = useState(null);
 
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
-
-  const [closedCourt, setClosedCourt] = useState("salon");
-  const [closedDate, setClosedDate] = useState(getToday());
-  const [closedStart, setClosedStart] = useState("12:00");
-  const [closedEnd, setClosedEnd] = useState("16:00");
-  const [closedReason, setClosedReason] = useState("Kurs");
+  const [adminSelectedDate, setAdminSelectedDate] = useState(getToday());
 
   const selectedCourtName =
     courtsSeed.find((c) => c.id === selectedCourt)?.name || "";
@@ -103,7 +125,6 @@ function App() {
 
   useEffect(() => {
     loadReservations();
-    loadClosedSlots();
   }, []);
 
   async function loadReservations() {
@@ -120,20 +141,6 @@ function App() {
     setReservations(data || []);
   }
 
-  async function loadClosedSlots() {
-    const { data, error } = await supabase
-      .from("closed_slots")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      alert("Kapalı saatler yüklenemedi: " + error.message);
-      return;
-    }
-
-    setClosedSlots(data || []);
-  }
-
   const reservedTimes = useMemo(() => {
     return reservations
       .filter(
@@ -144,26 +151,21 @@ function App() {
       .map((r) => r.reservation_time);
   }, [reservations, selectedCourt, selectedDate]);
 
-  const closedTimes = useMemo(() => {
-    return hours.filter((hour) =>
-      closedSlots.some(
-        (slot) =>
-          slot.court_id === selectedCourt &&
-          slot.closed_date === selectedDate &&
-          isTimeClosed(hour, slot)
-      )
+  const adminReservations = useMemo(() => {
+    return reservations.filter(
+      (r) => r.reservation_date === adminSelectedDate
     );
-  }, [closedSlots, selectedCourt, selectedDate]);
+  }, [reservations, adminSelectedDate]);
 
   function copyIban() {
     navigator.clipboard.writeText(IBAN);
     alert("IBAN kopyalandı.");
   }
 
-  async function downloadReceipt(filePath) {
+  async function openReceipt(path) {
     const { data, error } = await supabase.storage
       .from("dekontlar")
-      .createSignedUrl(filePath, 60);
+      .createSignedUrl(path, 60);
 
     if (error) {
       alert("Dekont açılamadı: " + error.message);
@@ -174,6 +176,15 @@ function App() {
   }
 
   async function reserve() {
+    if (!isDateAllowed(selectedCourt, selectedDate)) {
+      if (selectedCourt === "salon") {
+        alert("Çok Amaçlı Salon için sadece içinde bulunulan haftaya rezervasyon yapılabilir.");
+      } else {
+        alert("Tenis Kortu için sadece bugün, yarın ve sonraki gün rezervasyon yapılabilir.");
+      }
+      return;
+    }
+
     if (!selectedTime || !name || !phone || !personCount || !receiptFile) {
       alert("Ad soyad, telefon, kişi sayısı, saat seçimi ve dekont zorunludur.");
       return;
@@ -184,12 +195,17 @@ function App() {
       return;
     }
 
-    if (closedTimes.includes(selectedTime)) {
-      alert("Bu saat kurs/ders nedeniyle kapalı.");
-      return;
-    }
+    const safeFileName = receiptFile.name
+      .replaceAll(" ", "-")
+      .replace(/[çÇ]/g, "c")
+      .replace(/[ğĞ]/g, "g")
+      .replace(/[ıİ]/g, "i")
+      .replace(/[öÖ]/g, "o")
+      .replace(/[şŞ]/g, "s")
+      .replace(/[üÜ]/g, "u")
+      .replace(/[^a-zA-Z0-9.-]/g, "");
 
-    const filePath = `${selectedDate}/${Date.now()}-${receiptFile.name}`;
+    const filePath = `${selectedDate}/${Date.now()}-${safeFileName}`;
 
     const uploadResult = await supabase.storage
       .from("dekontlar")
@@ -243,60 +259,14 @@ function App() {
     }
   }
 
-  async function addClosedSlot() {
-    const courtName = courtsSeed.find((c) => c.id === closedCourt)?.name;
+  function handleCourtChange(e) {
+    const newCourt = e.target.value;
+    setSelectedCourt(newCourt);
 
-    if (!closedDate || !closedStart || !closedEnd || !closedReason) {
-      alert("Alan, tarih, saat ve sebep zorunludur.");
-      return;
+    if (!isDateAllowed(newCourt, selectedDate)) {
+      setSelectedDate(getToday());
+      setSelectedTime("");
     }
-
-    const { error } = await supabase.from("closed_slots").insert({
-      court_id: closedCourt,
-      court_name: courtName,
-      closed_date: closedDate,
-      start_time: closedStart,
-      end_time: closedEnd,
-      reason: closedReason,
-    });
-
-    if (error) {
-      alert("Kapalı saat eklenemedi: " + error.message);
-      return;
-    }
-
-    alert("Kapalı saat eklendi.");
-    setClosedReason("Kurs");
-    loadClosedSlots();
-  }
-
-  async function deleteClosedSlot(id) {
-    const { error } = await supabase
-      .from("closed_slots")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      alert("Kapalı saat silinemedi: " + error.message);
-      return;
-    }
-
-    loadClosedSlots();
-  }
-
-  async function deleteReservation(id) {
-    const { error } = await supabase
-      .from("reservations")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      alert("Rezervasyon silinemedi: " + error.message);
-      return;
-    }
-
-    alert("Rezervasyon silindi.");
-    loadReservations();
   }
 
   return (
@@ -304,13 +274,7 @@ function App() {
       <h1>Saha & Kort Rezervasyon</h1>
 
       <div style={{ marginBottom: 20 }}>
-        <select
-          value={selectedCourt}
-          onChange={(e) => {
-            setSelectedCourt(e.target.value);
-            setSelectedTime("");
-          }}
-        >
+        <select value={selectedCourt} onChange={handleCourtChange}>
           {courtsSeed.map((court) => (
             <option key={court.id} value={court.id}>
               {court.name}
@@ -321,6 +285,8 @@ function App() {
         <input
           type="date"
           value={selectedDate}
+          min={selectedCourt === "tenis" ? getToday() : getWeekRange().start}
+          max={selectedCourt === "tenis" ? getMaxTenisDate() : getWeekRange().end}
           onChange={(e) => {
             setSelectedDate(e.target.value);
             setSelectedTime("");
@@ -329,33 +295,32 @@ function App() {
         />
       </div>
 
+      <p style={{ color: "#555" }}>
+        {selectedCourt === "salon"
+          ? "Çok Amaçlı Salon için sadece bulunduğunuz hafta içinde rezervasyon yapılabilir."
+          : "Tenis Kortu için sadece bugün, yarın ve sonraki gün rezervasyon yapılabilir."}
+      </p>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 30 }}>
         {hours.map((hour) => {
           const isReserved = reservedTimes.includes(hour);
-          const isClosed = closedTimes.includes(hour);
 
           return (
             <button
               key={hour}
-              disabled={isReserved || isClosed}
+              disabled={isReserved}
               onClick={() => setSelectedTime(hour)}
               style={{
                 padding: 20,
                 borderRadius: 10,
                 border: "1px solid #ccc",
-                background: isReserved
-                  ? "#ddd"
-                  : isClosed
-                  ? "#f3b6b6"
-                  : selectedTime === hour
-                  ? "black"
-                  : "white",
+                background: isReserved ? "#ddd" : selectedTime === hour ? "black" : "white",
                 color: selectedTime === hour ? "white" : "black",
-                cursor: isReserved || isClosed ? "not-allowed" : "pointer",
+                cursor: isReserved ? "not-allowed" : "pointer",
               }}
             >
               <div>{hour}</div>
-              <div>{isReserved ? "DOLU" : isClosed ? "KAPALI" : "BOŞ"}</div>
+              <div>{isReserved ? "DOLU" : "BOŞ"}</div>
             </button>
           );
         })}
@@ -510,71 +475,25 @@ function App() {
               Yönetici Panelini Kapat
             </button>
 
-            <h2>Ders / Kurs Saati Kapat</h2>
+            <h2>Yönetici Paneli</h2>
 
-            <div style={{ border: "1px solid #ddd", padding: 15, borderRadius: 10, marginBottom: 25 }}>
-              <select value={closedCourt} onChange={(e) => setClosedCourt(e.target.value)}>
-                {courtsSeed.map((court) => (
-                  <option key={court.id} value={court.id}>
-                    {court.name}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                type="date"
-                value={closedDate}
-                onChange={(e) => setClosedDate(e.target.value)}
-                style={{ marginLeft: 10 }}
-              />
-
-              <select value={closedStart} onChange={(e) => setClosedStart(e.target.value)} style={{ marginLeft: 10 }}>
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-
-              <select value={closedEnd} onChange={(e) => setClosedEnd(e.target.value)} style={{ marginLeft: 10 }}>
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                placeholder="Sebep: Kurs / Ders / Bakım"
-                value={closedReason}
-                onChange={(e) => setClosedReason(e.target.value)}
-                style={{ display: "block", width: "100%", padding: 10, marginTop: 10 }}
-              />
-
-              <button onClick={addClosedSlot} style={{ marginTop: 10 }}>
-                Kapalı Saat Ekle
-              </button>
+            <div style={{ marginBottom: 20 }}>
+              <label>
+                Görüntülenecek tarih:{" "}
+                <input
+                  type="date"
+                  value={adminSelectedDate}
+                  onChange={(e) => setAdminSelectedDate(e.target.value)}
+                  style={{ padding: 10 }}
+                />
+              </label>
             </div>
 
-            <h2>Kapalı Saatler</h2>
+            {adminReservations.length === 0 && (
+              <p>Seçilen tarihte rezervasyon yok.</p>
+            )}
 
-            {closedSlots.length === 0 && <p>Kapalı saat yok.</p>}
-
-            {closedSlots.map((slot) => (
-              <div key={slot.id} style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                <strong>{slot.closed_date}</strong> | {slot.court_name} | {slot.start_time} - {slot.end_time}
-                <br />
-                Sebep: {slot.reason}
-                <br />
-                <button onClick={() => deleteClosedSlot(slot.id)}>Sil</button>
-              </div>
-            ))}
-
-            <h2>Rezervasyonlar</h2>
-
-            {reservations.length === 0 && <p>Henüz rezervasyon yok.</p>}
-
-            {reservations.map((r) => (
+            {adminReservations.map((r) => (
               <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
                 <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
                 <br />
@@ -585,41 +504,8 @@ function App() {
                 <br />
                 Dekont: {r.receipt_name}
                 <br />
-                <button
-                  onClick={() => downloadReceipt(r.receipt_url)}
-                  style={{
-                    marginTop: 8,
-                    marginRight: 8,
-                    padding: 8,
-                    background: "#111827",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 6,
-                  }}
-                >
-                  Dekontu Aç / İndir
-                </button>
-
-                <button
-                  onClick={() => {
-                    const approved = window.confirm(
-                      "Bu rezervasyonu silmek istediğinize emin misiniz?"
-                    );
-
-                    if (approved) {
-                      deleteReservation(r.id);
-                    }
-                  }}
-                  style={{
-                    marginTop: 8,
-                    padding: 8,
-                    background: "#dc2626",
-                    color: "white",
-                    border: "none",
-                    borderRadius: 6,
-                  }}
-                >
-                  Rezervasyonu Sil
+                <button onClick={() => openReceipt(r.receipt_url)}>
+                  Dekontu Aç
                 </button>
               </div>
             ))}
