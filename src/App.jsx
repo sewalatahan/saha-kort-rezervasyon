@@ -63,7 +63,6 @@ function getTenisDayType(date, time) {
 
   const monthDay = date.slice(5);
   const hour = Number(time.slice(0, 2));
-
   const summer = monthDay >= "06-01" && monthDay <= "10-01";
 
   if (summer) {
@@ -122,8 +121,7 @@ function App() {
   if (selectedCourt === "tenis") {
     category = tennisCategory;
     dayType = tennisDayType;
-    pricingType =
-      tennisCategory === "yetiskin" ? "Yetişkin" : "Öğrenci";
+    pricingType = tennisCategory === "yetiskin" ? "Yetişkin" : "Öğrenci";
 
     if (tennisCategory === "yetiskin" && tennisDayType === "gunduz") unitPrice = 163;
     if (tennisCategory === "yetiskin" && tennisDayType === "gece") unitPrice = 217;
@@ -145,7 +143,7 @@ function App() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      alert("Rezervasyonlar yüklenemedi.");
+      alert("Rezervasyonlar yüklenemedi: " + error.message);
       return;
     }
 
@@ -157,9 +155,12 @@ function App() {
       .from("closed_slots")
       .select("*");
 
-    if (!error) {
-      setClosedSlots(data || []);
+    if (error) {
+      console.log(error.message);
+      return;
     }
+
+    setClosedSlots(data || []);
   }
 
   async function createClosedSlot() {
@@ -174,11 +175,25 @@ function App() {
       });
 
     if (error) {
-      alert("Kapalı saat kaydedilemedi.");
+      alert("Kapalı saat kaydedilemedi: " + error.message);
       return;
     }
 
     alert("Saat başarıyla kapatıldı.");
+    loadClosedSlots();
+  }
+
+  async function deleteClosedSlot(id) {
+    const { error } = await supabase
+      .from("closed_slots")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      alert("Kapalı saat silinemedi: " + error.message);
+      return;
+    }
+
     loadClosedSlots();
   }
 
@@ -211,6 +226,12 @@ function App() {
     );
   }, [reservations, adminSelectedDate]);
 
+  const adminClosedSlots = useMemo(() => {
+    return closedSlots.filter(
+      (s) => s.close_date === adminSelectedDate
+    );
+  }, [closedSlots, adminSelectedDate]);
+
   function copyIban() {
     navigator.clipboard.writeText(IBAN);
     alert("IBAN kopyalandı.");
@@ -222,7 +243,7 @@ function App() {
       .createSignedUrl(path, 60);
 
     if (error) {
-      alert("Dekont açılamadı.");
+      alert("Dekont açılamadı: " + error.message);
       return;
     }
 
@@ -231,12 +252,16 @@ function App() {
 
   async function reserve() {
     if (!isDateAllowed(selectedCourt, selectedDate)) {
-      alert("Bu tarih için rezervasyon yapılamaz.");
+      if (selectedCourt === "salon") {
+        alert("Çok Amaçlı Salon için sadece içinde bulunulan haftaya rezervasyon yapılabilir.");
+      } else {
+        alert("Tenis Kortu için sadece bugün, yarın ve sonraki gün rezervasyon yapılabilir.");
+      }
       return;
     }
 
-    if (!selectedTime || !name || !phone || !receiptFile) {
-      alert("Tüm alanlar zorunludur.");
+    if (!selectedTime || !name || !phone || !personCount || !receiptFile) {
+      alert("Ad soyad, telefon, kişi sayısı, saat seçimi ve dekont zorunludur.");
       return;
     }
 
@@ -260,15 +285,14 @@ function App() {
       .replace(/[üÜ]/g, "u")
       .replace(/[^a-zA-Z0-9.-]/g, "");
 
-    const filePath =
-      `${selectedDate}/${Date.now()}-${safeFileName}`;
+    const filePath = `${selectedDate}/${Date.now()}-${safeFileName}`;
 
     const uploadResult = await supabase.storage
       .from("dekontlar")
       .upload(filePath, receiptFile);
 
     if (uploadResult.error) {
-      alert("Dekont yüklenemedi.");
+      alert("Dekont yüklenemedi: " + uploadResult.error.message);
       return;
     }
 
@@ -289,14 +313,15 @@ function App() {
         total_price: totalPrice,
         receipt_url: filePath,
         receipt_name: receiptFile.name,
+        is_approved: false,
       });
 
     if (error) {
-      alert("Rezervasyon kaydedilemedi.");
+      alert("Rezervasyon kaydedilemedi: " + error.message);
       return;
     }
 
-    alert("Rezervasyon oluşturuldu.");
+    alert("Rezervasyon oluşturuldu. Dekont yönetici tarafından kontrol edilecektir.");
 
     setSelectedTime("");
     setName("");
@@ -312,19 +337,26 @@ function App() {
       setAdminOpen(true);
       setAdminPassword("");
     } else {
-      alert("Şifre yanlış.");
+      alert("Yönetici şifresi yanlış.");
+    }
+  }
+
+  function handleCourtChange(e) {
+    const newCourt = e.target.value;
+    setSelectedCourt(newCourt);
+    setSelectedTime("");
+
+    if (!isDateAllowed(newCourt, selectedDate)) {
+      setSelectedDate(getToday());
     }
   }
 
   return (
-    <div style={{ maxWidth: 950, margin: "0 auto", padding: 20 }}>
+    <div style={{ maxWidth: 950, margin: "0 auto", padding: 20, fontFamily: "Arial" }}>
       <h1>Saha & Kort Rezervasyon</h1>
 
       <div style={{ marginBottom: 20 }}>
-        <select
-          value={selectedCourt}
-          onChange={(e) => setSelectedCourt(e.target.value)}
-        >
+        <select value={selectedCourt} onChange={handleCourtChange}>
           {courtsSeed.map((court) => (
             <option key={court.id} value={court.id}>
               {court.name}
@@ -335,25 +367,23 @@ function App() {
         <input
           type="date"
           value={selectedDate}
-          min={selectedCourt === "tenis"
-            ? getToday()
-            : getWeekRange().start}
-          max={selectedCourt === "tenis"
-            ? getMaxTenisDate()
-            : getWeekRange().end}
-          onChange={(e) => setSelectedDate(e.target.value)}
+          min={selectedCourt === "tenis" ? getToday() : getWeekRange().start}
+          max={selectedCourt === "tenis" ? getMaxTenisDate() : getWeekRange().end}
+          onChange={(e) => {
+            setSelectedDate(e.target.value);
+            setSelectedTime("");
+          }}
           style={{ marginLeft: 10 }}
         />
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3,1fr)",
-          gap: 10,
-          marginBottom: 30,
-        }}
-      >
+      <p style={{ color: "#555" }}>
+        {selectedCourt === "salon"
+          ? "Çok Amaçlı Salon için sadece bulunduğunuz hafta içinde rezervasyon yapılabilir."
+          : "Tenis Kortu için sadece bugün, yarın ve sonraki gün rezervasyon yapılabilir."}
+      </p>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 30 }}>
         {hours.map((hour) => {
           const isReserved = reservedTimes.includes(hour);
           const isClosed = closedTimes.includes(hour);
@@ -367,33 +397,25 @@ function App() {
                 padding: 20,
                 borderRadius: 10,
                 border: "1px solid #ccc",
-                background:
-                  isClosed
-                    ? "#991b1b"
-                    : isReserved
-                    ? "#ddd"
-                    : selectedTime === hour
-                    ? "black"
-                    : "white",
-                color:
-                  selectedTime === hour ? "white" : "black",
+                background: isClosed
+                  ? "#991b1b"
+                  : isReserved
+                  ? "#ddd"
+                  : selectedTime === hour
+                  ? "black"
+                  : "white",
+                color: selectedTime === hour || isClosed ? "white" : "black",
+                cursor: isReserved || isClosed ? "not-allowed" : "pointer",
               }}
             >
               <div>{hour}</div>
-
-              <div>
-                {isClosed
-                  ? "KAPALI"
-                  : isReserved
-                  ? "DOLU"
-                  : "BOŞ"}
-              </div>
+              <div>{isClosed ? "KAPALI" : isReserved ? "DOLU" : "BOŞ"}</div>
             </button>
           );
         })}
       </div>
 
-      <div style={{ border: "1px solid #ddd", padding: 20 }}>
+      <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 10 }}>
         <h2>Rezervasyon Yap</h2>
 
         <input
@@ -404,7 +426,7 @@ function App() {
         />
 
         <input
-          placeholder="Telefon"
+          placeholder="Telefon Numarası"
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           style={{ width: "100%", padding: 10, marginBottom: 10 }}
@@ -427,7 +449,7 @@ function App() {
                 checked={volleyLicense === "lisanssiz"}
                 onChange={() => setVolleyLicense("lisanssiz")}
               />
-              Lisanssız
+              {" "}Lisanssız kişi başı 48 TL
             </label>
 
             <label>
@@ -436,7 +458,7 @@ function App() {
                 checked={volleyLicense === "lisansli"}
                 onChange={() => setVolleyLicense("lisansli")}
               />
-              Lisanslı
+              {" "}Lisanslı kişi başı 25 TL
             </label>
           </div>
         )}
@@ -449,7 +471,7 @@ function App() {
                 checked={tennisCategory === "yetiskin"}
                 onChange={() => setTennisCategory("yetiskin")}
               />
-              Yetişkin
+              {" "}Yetişkin
             </label>
 
             <label>
@@ -458,50 +480,54 @@ function App() {
                 checked={tennisCategory === "ogrenci"}
                 onChange={() => setTennisCategory("ogrenci")}
               />
-              Öğrenci
+              {" "}Öğrenci
             </label>
+
+            <p>
+              Seçilen saate göre dönem:{" "}
+              <strong>{tennisDayType === "gece" ? "Gece" : "Gündüz"}</strong>
+            </p>
           </div>
         )}
 
-        <div
-          style={{
-            background: "#111827",
-            color: "white",
-            padding: 18,
-            borderRadius: 10,
-            marginBottom: 15,
-          }}
-        >
-          <h3>Ödeme Bilgileri</h3>
+        <div style={{ background: "#111827", color: "white", padding: 18, borderRadius: 10, marginBottom: 15 }}>
+          <h3 style={{ marginTop: 0 }}>Ödeme Bilgileri</h3>
 
           <p>
-            {personCount} kişi x {unitPrice} TL =
-            <strong> {totalPrice} TL</strong>
+            {personCount} kişi x {unitPrice} TL ={" "}
+            <strong>{totalPrice} TL</strong>
+          </p>
+
+          <p>
+            Lütfen toplam <strong>{totalPrice} TL</strong> tutarı aşağıdaki IBAN’a gönderiniz.
           </p>
 
           <p><strong>Alıcı:</strong> {ALICI}</p>
 
-          <div
-            style={{
-              background: "#000",
-              padding: 12,
-              borderRadius: 8,
-              fontWeight: "bold",
-            }}
-          >
+          <div style={{ background: "#000", padding: 12, borderRadius: 8, fontWeight: "bold", fontSize: 18, letterSpacing: 1, marginBottom: 10 }}>
             {IBAN}
           </div>
 
-          <button onClick={copyIban}>
-            IBAN Kopyala
-          </button>
+          <button onClick={copyIban}>IBAN Kopyala</button>
+
+          <p style={{ fontSize: 14, lineHeight: 1.6 }}>
+            Banka açıklama kısmına mutlaka:
+            <br />
+            <strong>Ad Soyad + Tesis Adı + Tarih + Saat</strong>
+            <br />
+            bilgilerini yazınız.
+          </p>
         </div>
 
-        <input
-          type="file"
-          accept="image/*,.pdf"
-          onChange={(e) => setReceiptFile(e.target.files[0])}
-        />
+        <label>
+          Dekont Yükle:
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => setReceiptFile(e.target.files[0])}
+            style={{ display: "block", marginTop: 8, marginBottom: 15 }}
+          />
+        </label>
 
         <button
           onClick={reserve}
@@ -510,8 +536,8 @@ function App() {
             background: "black",
             color: "white",
             border: "none",
+            borderRadius: 8,
             width: "100%",
-            marginTop: 15,
           }}
         >
           Rezervasyon Yap
@@ -525,37 +551,25 @@ function App() {
           <div>
             <input
               type="password"
-              placeholder="Şifre"
+              placeholder="Yönetici şifresi"
               value={adminPassword}
-              onChange={(e) =>
-                setAdminPassword(e.target.value)
-              }
+              onChange={(e) => setAdminPassword(e.target.value)}
+              style={{ padding: 10, marginRight: 10 }}
             />
-
-            <button onClick={loginAdmin}>
-              Giriş Yap
-            </button>
+            <button onClick={loginAdmin}>Giriş Yap</button>
           </div>
         ) : (
           <div>
+            <button onClick={() => setAdminOpen(false)}>
+              Yönetici Panelini Kapat
+            </button>
+
             <h2>Yönetici Paneli</h2>
 
-            <div
-              style={{
-                border: "1px solid #ddd",
-                padding: 15,
-                borderRadius: 10,
-                marginBottom: 20,
-              }}
-            >
+            <div style={{ border: "1px solid #ddd", padding: 15, borderRadius: 10, marginBottom: 20 }}>
               <h3>Saat Kapat</h3>
 
-              <select
-                value={closeCourt}
-                onChange={(e) =>
-                  setCloseCourt(e.target.value)
-                }
-              >
+              <select value={closeCourt} onChange={(e) => setCloseCourt(e.target.value)}>
                 {courtsSeed.map((court) => (
                   <option key={court.id} value={court.id}>
                     {court.name}
@@ -563,96 +577,60 @@ function App() {
                 ))}
               </select>
 
-              <input
-                type="date"
-                value={closeDate}
-                onChange={(e) =>
-                  setCloseDate(e.target.value)
-                }
-              />
-
-              <select
-                value={closeStart}
-                onChange={(e) =>
-                  setCloseStart(e.target.value)
-                }
-              >
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
+              <input type="date" value={closeDate} onChange={(e) => setCloseDate(e.target.value)} />
+              <select value={closeStart} onChange={(e) => setCloseStart(e.target.value)}>
+                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
-
-              <select
-                value={closeEnd}
-                onChange={(e) =>
-                  setCloseEnd(e.target.value)
-                }
-              >
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
+              <select value={closeEnd} onChange={(e) => setCloseEnd(e.target.value)}>
+                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
               </select>
 
               <input
-                placeholder="Sebep"
+                placeholder="Sebep: Kurs, Bakım, Turnuva"
                 value={closeReason}
-                onChange={(e) =>
-                  setCloseReason(e.target.value)
-                }
+                onChange={(e) => setCloseReason(e.target.value)}
               />
 
-              <button onClick={createClosedSlot}>
-                Saati Kapat
-              </button>
+              <button onClick={createClosedSlot}>Saati Kapat</button>
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <input
-                type="date"
-                value={adminSelectedDate}
-                onChange={(e) =>
-                  setAdminSelectedDate(e.target.value)
-                }
-              />
+              <label>
+                Görüntülenecek tarih:{" "}
+                <input
+                  type="date"
+                  value={adminSelectedDate}
+                  onChange={(e) => setAdminSelectedDate(e.target.value)}
+                  style={{ padding: 10 }}
+                />
+              </label>
             </div>
 
+            <h3>Kapalı Saatler</h3>
+            {adminClosedSlots.length === 0 && <p>Seçilen tarihte kapalı saat yok.</p>}
+            {adminClosedSlots.map((s) => (
+              <div key={s.id} style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
+                {s.close_date} | {s.court_id} | {s.start_time}-{s.end_time} | {s.reason}
+                <br />
+                <button onClick={() => deleteClosedSlot(s.id)}>Kapalı Saati Sil</button>
+              </div>
+            ))}
+
+            <h3>Rezervasyonlar</h3>
+            {adminReservations.length === 0 && <p>Seçilen tarihte rezervasyon yok.</p>}
+
             {adminReservations.map((r) => (
-              <div
-                key={r.id}
-                style={{
-                  padding: 12,
-                  borderBottom: "1px solid #ddd",
-                }}
-              >
-                <strong>{r.reservation_date}</strong>
-                {" | "}
-                {r.reservation_time}
-                {" | "}
-                {r.court_name}
-
+              <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
+                <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
                 <br />
-
-                {r.full_name}
-                {" | "}
-                {r.phone}
-
+                {r.full_name} | {r.phone}
                 <br />
-
-                Tutar: {r.total_price} TL
-
+                Kişi: {r.person_count} | {r.pricing_type} |{" "}
+                {r.day_type ? r.day_type : "-"} | Tutar: {r.total_price} TL
                 <br />
-
-                <button
-                  onClick={() =>
-                    openReceipt(r.receipt_url)
-                  }
-                >
-                  Dekontu Aç
-                </button>
+                Dekont: {r.receipt_name}
+                <br />
+                <button onClick={() => openReceipt(r.receipt_url)}>Dekontu Aç</button>
               </div>
             ))}
           </div>
