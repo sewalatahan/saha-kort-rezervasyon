@@ -249,7 +249,24 @@ function App() {
 
     window.open(data.signedUrl, "_blank");
   }
-
+  async function deleteReservation(id) {
+    const ok = confirm("Bu rezervasyonu silmek istediğinizden emin misiniz?");
+  
+    if (!ok) return;
+  
+    const { error } = await supabase
+      .from("reservations")
+      .delete()
+      .eq("id", id);
+  
+    if (error) {
+      alert("Rezervasyon silinemedi: " + error.message);
+      return;
+    }
+  
+    alert("Rezervasyon silindi.");
+    loadReservations();
+  }
   async function reserve() {
     if (!isDateAllowed(selectedCourt, selectedDate)) {
       if (selectedCourt === "salon") {
@@ -578,11 +595,21 @@ function App() {
               </select>
 
               <input type="date" value={closeDate} onChange={(e) => setCloseDate(e.target.value)} />
+
               <select value={closeStart} onChange={(e) => setCloseStart(e.target.value)}>
-                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                {hours.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
               </select>
+
               <select value={closeEnd} onChange={(e) => setCloseEnd(e.target.value)}>
-                {hours.map((h) => <option key={h} value={h}>{h}</option>)}
+                {hours.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
               </select>
 
               <input
@@ -607,17 +634,26 @@ function App() {
             </div>
 
             <h3>Kapalı Saatler</h3>
-            {adminClosedSlots.length === 0 && <p>Seçilen tarihte kapalı saat yok.</p>}
+
+            {adminClosedSlots.length === 0 && (
+              <p>Seçilen tarihte kapalı saat yok.</p>
+            )}
+
             {adminClosedSlots.map((s) => (
               <div key={s.id} style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
                 {s.close_date} | {s.court_id} | {s.start_time}-{s.end_time} | {s.reason}
                 <br />
-                <button onClick={() => deleteClosedSlot(s.id)}>Kapalı Saati Sil</button>
+                <button onClick={() => deleteClosedSlot(s.id)}>
+                  Kapalı Saati Sil
+                </button>
               </div>
             ))}
 
             <h3>Rezervasyonlar</h3>
-            {adminReservations.length === 0 && <p>Seçilen tarihte rezervasyon yok.</p>}
+
+            {adminReservations.length === 0 && (
+              <p>Seçilen tarihte rezervasyon yok.</p>
+            )}
 
             {adminReservations.map((r) => (
               <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
@@ -630,7 +666,26 @@ function App() {
                 <br />
                 Dekont: {r.receipt_name}
                 <br />
-                <button onClick={() => openReceipt(r.receipt_url)}>Dekontu Aç</button>
+
+                <div style={{ marginTop: 8 }}>
+                  <button onClick={() => openReceipt(r.receipt_url)}>
+                    Dekontu Aç
+                  </button>
+
+                  <button
+                    onClick={() => deleteReservation(r.id)}
+                    style={{
+                      background: "#991b1b",
+                      color: "white",
+                      border: "none",
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      marginLeft: 8,
+                    }}
+                  >
+                    Rezervasyonu Sil
+                  </button>
+                </div>
               </div>
             ))}
           </div>
