@@ -1,3 +1,5 @@
+import { courtsSeed, hours } from "../data/courts";
+
 function AdminPanel({
   adminOpen,
   adminRole,
@@ -8,6 +10,19 @@ function AdminPanel({
   setAdminOpen,
   setAdminRole,
   loginAdmin,
+
+  closeCourt,
+  setCloseCourt,
+  closeDate,
+  setCloseDate,
+  closeStart,
+  setCloseStart,
+  closeEnd,
+  setCloseEnd,
+  closeReason,
+  setCloseReason,
+  createClosedSlot,
+
   adminSelectedDate,
   setAdminSelectedDate,
   adminClosedSlots,
@@ -65,6 +80,50 @@ function AdminPanel({
             Oturumu Kapat
           </button>
 
+          {adminRole === "full" && (
+            <div style={{ border: "1px solid #ddd", padding: 15, borderRadius: 10, marginBottom: 20 }}>
+              <h3>Saat Kapat</h3>
+
+              <select value={closeCourt} onChange={(e) => setCloseCourt(e.target.value)}>
+                {courtsSeed.map((court) => (
+                  <option key={court.id} value={court.id}>
+                    {court.name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="date"
+                value={closeDate}
+                onChange={(e) => setCloseDate(e.target.value)}
+              />
+
+              <select value={closeStart} onChange={(e) => setCloseStart(e.target.value)}>
+                {hours.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
+              </select>
+
+              <select value={closeEnd} onChange={(e) => setCloseEnd(e.target.value)}>
+                {hours.map((h) => (
+                  <option key={h} value={h}>
+                    {h}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                placeholder="Sebep: Kurs, Bakım, Turnuva"
+                value={closeReason}
+                onChange={(e) => setCloseReason(e.target.value)}
+              />
+
+              <button onClick={createClosedSlot}>Saati Kapat</button>
+            </div>
+          )}
+
           <div style={{ marginBottom: 20 }}>
             <label>
               Görüntülenecek tarih:
@@ -79,18 +138,10 @@ function AdminPanel({
 
           <h3>Kapalı Saatler</h3>
 
-          {adminClosedSlots.length === 0 && (
-            <p>Seçilen tarihte kapalı saat yok.</p>
-          )}
+          {adminClosedSlots.length === 0 && <p>Seçilen tarihte kapalı saat yok.</p>}
 
           {adminClosedSlots.map((s) => (
-            <div
-              key={s.id}
-              style={{
-                padding: 12,
-                borderBottom: "1px solid #ddd",
-              }}
-            >
+            <div key={s.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
               {s.close_date} | {s.court_id} | {s.start_time}-{s.end_time} | {s.reason}
 
               {adminRole === "full" && (
@@ -105,18 +156,10 @@ function AdminPanel({
 
           <h3 style={{ marginTop: 30 }}>Rezervasyonlar</h3>
 
-          {adminReservations.length === 0 && (
-            <p>Seçilen tarihte rezervasyon yok.</p>
-          )}
+          {adminReservations.length === 0 && <p>Seçilen tarihte rezervasyon yok.</p>}
 
           {adminReservations.map((r) => (
-            <div
-              key={r.id}
-              style={{
-                padding: 12,
-                borderBottom: "1px solid #ddd",
-              }}
-            >
+            <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
               <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
               <br />
               {r.full_name} | {r.phone}
