@@ -223,7 +223,25 @@ function App() {
       alert("Bu saat kapalı.");
       return;
     }
+const normalizedName = name.trim().toLocaleUpperCase("tr-TR");
 
+const sameDaySameNameReservations = reservations.filter((reservation) => {
+  return (
+    reservation.reservation_date === selectedDate &&
+    reservation.court_id === selectedCourt &&
+    reservation.full_name.trim().toLocaleUpperCase("tr-TR") === normalizedName
+  );
+});
+
+if (selectedCourt === "salon" && sameDaySameNameReservations.length >= 1) {
+  alert("Aynı kişi aynı gün Çok Amaçlı Salon için sadece 1 saat rezervasyon yapabilir.");
+  return;
+}
+
+if (selectedCourt === "tenis" && sameDaySameNameReservations.length >= 2) {
+  alert("Aynı kişi aynı gün Tenis Kortu için en fazla 2 saat rezervasyon yapabilir.");
+  return;
+}
     const safeFileName = receiptFile.name
       .replaceAll(" ", "-")
       .replace(/[çÇ]/g, "c")
