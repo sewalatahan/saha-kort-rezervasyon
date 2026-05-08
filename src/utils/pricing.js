@@ -20,10 +20,21 @@ export function calculatePricing({
     dayType = tennisDayType;
     pricingType = tennisCategory === "yetiskin" ? "Yetişkin" : "Öğrenci";
 
-    if (tennisCategory === "yetiskin" && tennisDayType === "gunduz") unitPrice = 163;
-    if (tennisCategory === "yetiskin" && tennisDayType === "gece") unitPrice = 217;
-    if (tennisCategory === "ogrenci" && tennisDayType === "gunduz") unitPrice = 122;
-    if (tennisCategory === "ogrenci" && tennisDayType === "gece") unitPrice = 163;
+    if (tennisCategory === "yetiskin" && tennisDayType === "gunduz") {
+      unitPrice = 163;
+    }
+
+    if (tennisCategory === "yetiskin" && tennisDayType === "gece") {
+      unitPrice = 217;
+    }
+
+    if (tennisCategory === "ogrenci" && tennisDayType === "gunduz") {
+      unitPrice = 122;
+    }
+
+    if (tennisCategory === "ogrenci" && tennisDayType === "gece") {
+      unitPrice = 163;
+    }
   }
 
   return {
