@@ -1,77 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "./supabase";
-
-const courtsSeed = [
-  { id: "salon", name: "Çok Amaçlı Salon / Voleybol" },
-  { id: "tenis", name: "Tenis Kortu" },
-];
-
-const hours = [
-  "07:00", "08:00", "09:00", "10:00", "11:00",
-  "12:00", "13:00", "14:00", "15:00", "16:00",
-  "17:00", "18:00", "19:00", "20:00", "21:00",
-  "22:00", "23:00",
-];
-
-const IBAN = "TR67 0001 0020 8888 2519 6250 16";
-const ALICI = "Manisa Gençlik ve Spor İl Müdürlüğü";
-
-function getToday() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function getWeekRange(date = new Date()) {
-  const current = new Date(date);
-  const day = current.getDay();
-  const diffToMonday = day === 0 ? -6 : 1 - day;
-
-  const monday = new Date(current);
-  monday.setDate(current.getDate() + diffToMonday);
-
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
-
-  return {
-    start: monday.toISOString().slice(0, 10),
-    end: sunday.toISOString().slice(0, 10),
-  };
-}
-
-function getMaxTenisDate() {
-  const date = new Date();
-  date.setDate(date.getDate() + 2);
-  return date.toISOString().slice(0, 10);
-}
-
-function isDateAllowed(courtId, dateText) {
-  const today = getToday();
-
-  if (courtId === "tenis") {
-    return dateText >= today && dateText <= getMaxTenisDate();
-  }
-
-  if (courtId === "salon") {
-    const week = getWeekRange();
-    return dateText >= week.start && dateText <= week.end;
-  }
-
-  return true;
-}
-
-function getTenisDayType(date, time) {
-  if (!date || !time) return "";
-
-  const monthDay = date.slice(5);
-  const hour = Number(time.slice(0, 2));
-  const summer = monthDay >= "06-01" && monthDay <= "10-01";
-
-  if (summer) {
-    return hour >= 7 && hour <= 19 ? "gunduz" : "gece";
-  }
-
-  return hour >= 8 && hour <= 17 ? "gunduz" : "gece";
-}
-
+import { courtsSeed, hours, IBAN, ALICI } from "./data/courts";
+import {
+  getToday,
+  getWeekRange,
+  getMaxTenisDate,
+  isDateAllowed,
+  getTenisDayType,
+} from "./utils/dateRules";
+import { calculatePricing } from "./utils/pricing";
 function App() {
   const [reservations, setReservations] = useState([]);
   const [closedSlots, setClosedSlots] = useState([]);
@@ -90,8 +27,11 @@ function App() {
   const [receiptFile, setReceiptFile] = useState(null);
 
   const [adminOpen, setAdminOpen] = useState(false);
-  const [adminPassword, setAdminPassword] = useState("");
-  const [adminSelectedDate, setAdminSelectedDate] = useState(getToday());
+const [adminUsername, setAdminUsername] = useState("");
+const [adminPassword, setAdminPassword] = useState("");
+const [adminRole, setAdminRole] = useState("");
+const [showAdminPanel, setShowAdminPanel] = useState(false);
+const [adminSelectedDate, setAdminSelectedDate] = useState(getToday());
 
   const [closeCourt, setCloseCourt] = useState("salon");
   const [closeDate, setCloseDate] = useState(getToday());
@@ -107,27 +47,12 @@ function App() {
       ? getTenisDayType(selectedDate, selectedTime)
       : "";
 
-  let unitPrice = 0;
-  let category = "";
-  let pricingType = "";
-  let dayType = "";
-
-  if (selectedCourt === "salon") {
-    category = volleyLicense;
-    pricingType = volleyLicense === "lisansli" ? "Lisanslı" : "Lisanssız";
-    unitPrice = volleyLicense === "lisansli" ? 25 : 48;
-  }
-
-  if (selectedCourt === "tenis") {
-    category = tennisCategory;
-    dayType = tennisDayType;
-    pricingType = tennisCategory === "yetiskin" ? "Yetişkin" : "Öğrenci";
-
-    if (tennisCategory === "yetiskin" && tennisDayType === "gunduz") unitPrice = 163;
-    if (tennisCategory === "yetiskin" && tennisDayType === "gece") unitPrice = 217;
-    if (tennisCategory === "ogrenci" && tennisDayType === "gunduz") unitPrice = 122;
-    if (tennisCategory === "ogrenci" && tennisDayType === "gece") unitPrice = 163;
-  }
+  const { unitPrice, category, pricingType, dayType } = calculatePricing({
+    selectedCourt,
+    volleyLicense,
+    tennisCategory,
+    tennisDayType,
+  });
 
   const totalPrice = Number(personCount || 0) * unitPrice;
 
@@ -350,11 +275,22 @@ function App() {
   }
 
   function loginAdmin() {
-    if (adminPassword === "12345.eE") {
+    const users = {
+      "EBRU.ERDEMİR": { password: "12345.eE", role: "full" },
+      "SEVVAL.ATAHAN": { password: "12345.sA", role: "full" },
+      "GUVENLİK": { password: "12345.tA", role: "readonly" },
+    };
+
+    const username = adminUsername.trim().toLocaleUpperCase("tr-TR");
+    const user = users[username];
+
+    if (user && user.password === adminPassword) {
       setAdminOpen(true);
+      setAdminRole(user.role);
+      setAdminUsername("");
       setAdminPassword("");
     } else {
-      alert("Yönetici şifresi yanlış.");
+      alert("Kullanıcı adı veya parola yanlış.");
     }
   }
 
@@ -368,9 +304,200 @@ function App() {
     }
   }
 
+  if (showAdminPanel) {
+    return (
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: 20, fontFamily: "Arial" }}>
+        <button
+          onClick={() => setShowAdminPanel(false)}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #ccc",
+            background: "white",
+            cursor: "pointer",
+            marginBottom: 20,
+          }}
+        >
+          ← Rezervasyon Sayfasına Dön
+        </button>
+
+        <h1>Yönetici Paneli</h1>
+
+        {!adminOpen ? (
+          <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 10 }}>
+            <h2>Yönetici Girişi</h2>
+
+            <input
+              placeholder="Kullanıcı adı"
+              value={adminUsername}
+              onChange={(e) => setAdminUsername(e.target.value)}
+              style={{ width: "100%", padding: 10, marginBottom: 10 }}
+            />
+
+            <input
+              type="password"
+              placeholder="Parola"
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+              style={{ width: "100%", padding: 10, marginBottom: 10 }}
+            />
+
+            <button
+              onClick={loginAdmin}
+              style={{
+                padding: 12,
+                background: "black",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                width: "100%",
+              }}
+            >
+              Giriş Yap
+            </button>
+          </div>
+        ) : (
+          <div>
+            <button
+              onClick={() => {
+                setAdminOpen(false);
+                setAdminRole("");
+              }}
+            >
+              Yönetici Oturumunu Kapat
+            </button>
+
+           
+
+            {adminRole === "full" && (
+              <div style={{ border: "1px solid #ddd", padding: 15, borderRadius: 10, marginTop: 20, marginBottom: 20 }}>
+                <h3>Saat Kapat</h3>
+
+                <select value={closeCourt} onChange={(e) => setCloseCourt(e.target.value)}>
+                  {courtsSeed.map((court) => (
+                    <option key={court.id} value={court.id}>
+                      {court.name}
+                    </option>
+                  ))}
+                </select>
+
+                <input type="date" value={closeDate} onChange={(e) => setCloseDate(e.target.value)} />
+
+                <select value={closeStart} onChange={(e) => setCloseStart(e.target.value)}>
+                  {hours.map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+
+                <select value={closeEnd} onChange={(e) => setCloseEnd(e.target.value)}>
+                  {hours.map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  placeholder="Sebep: Kurs, Bakım, Turnuva"
+                  value={closeReason}
+                  onChange={(e) => setCloseReason(e.target.value)}
+                />
+
+                <button onClick={createClosedSlot}>Saati Kapat</button>
+              </div>
+            )}
+
+            <div style={{ marginBottom: 20 }}>
+              <label>
+                Görüntülenecek tarih: {" "}
+                <input
+                  type="date"
+                  value={adminSelectedDate}
+                  onChange={(e) => setAdminSelectedDate(e.target.value)}
+                  style={{ padding: 10 }}
+                />
+              </label>
+            </div>
+
+            <h3>Kapalı Saatler</h3>
+
+            {adminClosedSlots.length === 0 && (
+              <p>Seçilen tarihte kapalı saat yok.</p>
+            )}
+
+            {adminClosedSlots.map((s) => (
+              <div key={s.id} style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
+                {s.close_date} | {s.court_id} | {s.start_time}-{s.end_time} | {s.reason}
+                <br />
+                {adminRole === "full" && (
+                  <button onClick={() => deleteClosedSlot(s.id)}>
+                    Kapalı Saati Sil
+                  </button>
+                )}
+              </div>
+            ))}
+
+            <h3>Rezervasyonlar</h3>
+
+            {adminReservations.length === 0 && (
+              <p>Seçilen tarihte rezervasyon yok.</p>
+            )}
+
+            {adminReservations.map((r) => (
+              <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
+                <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
+                <br />
+                {r.full_name} | {r.phone}
+                <br />
+                Kişi: {r.person_count} | {r.pricing_type} | {r.day_type ? r.day_type : "-"} | Tutar: {r.total_price} TL
+                <br />
+                Dekont: {r.receipt_name}
+                <br />
+
+                <div style={{ marginTop: 8 }}>
+                  <button onClick={() => openReceipt(r.receipt_url)}>
+                    Dekontu Aç
+                  </button>
+
+                  {adminRole === "full" && (
+                    <button
+                      onClick={() => deleteReservation(r.id)}
+                      style={{
+                        background: "#991b1b",
+                        color: "white",
+                        border: "none",
+                        padding: "6px 10px",
+                        borderRadius: 6,
+                        marginLeft: 8,
+                      }}
+                    >
+                      Rezervasyonu Sil
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div style={{ maxWidth: 950, margin: "0 auto", padding: 20, fontFamily: "Arial" }}>
-      <h1>Saha & Kort Rezervasyon</h1>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 20,
+        }}
+      >
+        <h1 style={{ margin: 0 }}>Saha & Kort Rezervasyon</h1>
+      </div>
 
       <div style={{ marginBottom: 20 }}>
         <select value={selectedCourt} onChange={handleCourtChange}>
@@ -561,135 +688,20 @@ function App() {
         </button>
       </div>
 
-      <div style={{ marginTop: 40 }}>
-        <h2>Yönetici Girişi</h2>
-
-        {!adminOpen ? (
-          <div>
-            <input
-              type="password"
-              placeholder="Yönetici şifresi"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              style={{ padding: 10, marginRight: 10 }}
-            />
-            <button onClick={loginAdmin}>Giriş Yap</button>
-          </div>
-        ) : (
-          <div>
-            <button onClick={() => setAdminOpen(false)}>
-              Yönetici Panelini Kapat
-            </button>
-
-            <h2>Yönetici Paneli</h2>
-
-            <div style={{ border: "1px solid #ddd", padding: 15, borderRadius: 10, marginBottom: 20 }}>
-              <h3>Saat Kapat</h3>
-
-              <select value={closeCourt} onChange={(e) => setCloseCourt(e.target.value)}>
-                {courtsSeed.map((court) => (
-                  <option key={court.id} value={court.id}>
-                    {court.name}
-                  </option>
-                ))}
-              </select>
-
-              <input type="date" value={closeDate} onChange={(e) => setCloseDate(e.target.value)} />
-
-              <select value={closeStart} onChange={(e) => setCloseStart(e.target.value)}>
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-
-              <select value={closeEnd} onChange={(e) => setCloseEnd(e.target.value)}>
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
-
-              <input
-                placeholder="Sebep: Kurs, Bakım, Turnuva"
-                value={closeReason}
-                onChange={(e) => setCloseReason(e.target.value)}
-              />
-
-              <button onClick={createClosedSlot}>Saati Kapat</button>
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label>
-                Görüntülenecek tarih:{" "}
-                <input
-                  type="date"
-                  value={adminSelectedDate}
-                  onChange={(e) => setAdminSelectedDate(e.target.value)}
-                  style={{ padding: 10 }}
-                />
-              </label>
-            </div>
-
-            <h3>Kapalı Saatler</h3>
-
-            {adminClosedSlots.length === 0 && (
-              <p>Seçilen tarihte kapalı saat yok.</p>
-            )}
-
-            {adminClosedSlots.map((s) => (
-              <div key={s.id} style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-                {s.close_date} | {s.court_id} | {s.start_time}-{s.end_time} | {s.reason}
-                <br />
-                <button onClick={() => deleteClosedSlot(s.id)}>
-                  Kapalı Saati Sil
-                </button>
-              </div>
-            ))}
-
-            <h3>Rezervasyonlar</h3>
-
-            {adminReservations.length === 0 && (
-              <p>Seçilen tarihte rezervasyon yok.</p>
-            )}
-
-            {adminReservations.map((r) => (
-              <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
-                <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
-                <br />
-                {r.full_name} | {r.phone}
-                <br />
-                Kişi: {r.person_count} | {r.pricing_type} |{" "}
-                {r.day_type ? r.day_type : "-"} | Tutar: {r.total_price} TL
-                <br />
-                Dekont: {r.receipt_name}
-                <br />
-
-                <div style={{ marginTop: 8 }}>
-                  <button onClick={() => openReceipt(r.receipt_url)}>
-                    Dekontu Aç
-                  </button>
-
-                  <button
-                    onClick={() => deleteReservation(r.id)}
-                    style={{
-                      background: "#991b1b",
-                      color: "white",
-                      border: "none",
-                      padding: "6px 10px",
-                      borderRadius: 6,
-                      marginLeft: 8,
-                    }}
-                  >
-                    Rezervasyonu Sil
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      <div style={{ marginTop: 40, textAlign: "center" }}>
+        <button
+          onClick={() => setShowAdminPanel(true)}
+          style={{
+            padding: "12px 18px",
+            background: "#111827",
+            color: "white",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+          }}
+        >
+          Yönetici Paneli
+        </button>
       </div>
     </div>
   );
