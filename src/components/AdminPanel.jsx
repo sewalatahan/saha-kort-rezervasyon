@@ -81,46 +81,97 @@ function AdminPanel({
           </button>
 
           {adminRole === "full" && (
-            <div style={{ border: "1px solid #ddd", padding: 15, borderRadius: 10, marginBottom: 20 }}>
-              <h3>Saat Kapat</h3>
+            <div
+              style={{
+                border: "1px solid #ddd",
+                padding: 15,
+                borderRadius: 10,
+                marginBottom: 20,
+                background: "#f9fafb",
+              }}
+            >
+              <h3 style={{ marginTop: 0 }}>Saat Kapat / Kurs Ekle</h3>
 
-              <select value={closeCourt} onChange={(e) => setCloseCourt(e.target.value)}>
-                {courtsSeed.map((court) => (
-                  <option key={court.id} value={court.id}>
-                    {court.name}
-                  </option>
-                ))}
-              </select>
+              <div style={{ display: "grid", gap: 10 }}>
+                <label>
+                  Alan:
+                  <select
+                    value={closeCourt}
+                    onChange={(e) => setCloseCourt(e.target.value)}
+                    style={{ width: "100%", padding: 10, marginTop: 4 }}
+                  >
+                    {courtsSeed.map((court) => (
+                      <option key={court.id} value={court.id}>
+                        {court.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <input
-                type="date"
-                value={closeDate}
-                onChange={(e) => setCloseDate(e.target.value)}
-              />
+                <label>
+                  Tarih:
+                  <input
+                    type="date"
+                    value={closeDate}
+                    onChange={(e) => setCloseDate(e.target.value)}
+                    style={{ width: "100%", padding: 10, marginTop: 4 }}
+                  />
+                </label>
 
-              <select value={closeStart} onChange={(e) => setCloseStart(e.target.value)}>
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
+                <label>
+                  Başlangıç saati:
+                  <select
+                    value={closeStart}
+                    onChange={(e) => setCloseStart(e.target.value)}
+                    style={{ width: "100%", padding: 10, marginTop: 4 }}
+                  >
+                    {hours.map((h) => (
+                      <option key={h} value={h}>
+                        {h}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <select value={closeEnd} onChange={(e) => setCloseEnd(e.target.value)}>
-                {hours.map((h) => (
-                  <option key={h} value={h}>
-                    {h}
-                  </option>
-                ))}
-              </select>
+                <label>
+                  Bitiş saati:
+                  <select
+                    value={closeEnd}
+                    onChange={(e) => setCloseEnd(e.target.value)}
+                    style={{ width: "100%", padding: 10, marginTop: 4 }}
+                  >
+                    {hours.map((h) => (
+                      <option key={h} value={h}>
+                        {h}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
-              <input
-                placeholder="Sebep: Kurs, Bakım, Turnuva"
-                value={closeReason}
-                onChange={(e) => setCloseReason(e.target.value)}
-              />
+                <label>
+                  Sebep:
+                  <input
+                    placeholder="Kurs, Bakım, Turnuva"
+                    value={closeReason}
+                    onChange={(e) => setCloseReason(e.target.value)}
+                    style={{ width: "100%", padding: 10, marginTop: 4 }}
+                  />
+                </label>
 
-              <button onClick={createClosedSlot}>Saati Kapat</button>
+                <button
+                  onClick={createClosedSlot}
+                  style={{
+                    padding: 12,
+                    background: "black",
+                    color: "white",
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                  }}
+                >
+                  Saati Kapat
+                </button>
+              </div>
             </div>
           )}
 
