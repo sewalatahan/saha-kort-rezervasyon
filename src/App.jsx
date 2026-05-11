@@ -149,13 +149,17 @@ function App() {
 }, [closedSlots, selectedCourt, selectedDate]);
 
   const adminReservations = useMemo(() => {
-    return reservations.filter(
-      (reservation) => reservation.reservation_date === adminSelectedDate
-    );
+    return reservations
+      .filter(
+        (reservation) => reservation.reservation_date === adminSelectedDate
+      )
+      .sort((a, b) => a.reservation_time.localeCompare(b.reservation_time));
   }, [reservations, adminSelectedDate]);
 
   const adminClosedSlots = useMemo(() => {
-    return closedSlots.filter((slot) => slot.close_date === adminSelectedDate);
+    return closedSlots
+      .filter((slot) => slot.close_date === adminSelectedDate)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time));
   }, [closedSlots, adminSelectedDate]);
 
   function copyIban() {
@@ -238,8 +242,15 @@ if (selectedCourt === "salon" && sameDaySameNameReservations.length >= 1) {
   return;
 }
 
-if (selectedCourt === "tenis" && sameDaySameNameReservations.length >= 2) {
-  alert("Aynı kişi aynı gün Tenis Kortu için en fazla 2 saat rezervasyon yapabilir.");
+const currentHour = new Date().getHours();
+const isAfterFivePm = currentHour >= 17;
+
+if (
+  selectedCourt === "tenis" &&
+  !isAfterFivePm &&
+  sameDaySameNameReservations.length >= 2
+) {
+  alert("Aynı kişi saat 17:00'ye kadar Tenis Kortu için aynı gün en fazla 2 saat rezervasyon yapabilir.");
   return;
 }
     const safeFileName = receiptFile.name
