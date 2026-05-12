@@ -57,7 +57,9 @@ function App() {
   });
 
   const totalPrice = Number(personCount || 0) * unitPrice;
-
+  const isStudentReservation =
+    (selectedCourt === "tenis" && tennisCategory === "ogrenci") ||
+    (selectedCourt === "salon" && volleyLicense === "ogrenci");
   useEffect(() => {
     loadReservations();
     loadClosedSlots();
@@ -543,13 +545,22 @@ if (
               {" "}Lisanssız kişi başı 48 TL
             </label>
 
-            <label>
+            <label style={{ marginRight: 20 }}>
               <input
                 type="radio"
                 checked={volleyLicense === "lisansli"}
                 onChange={() => setVolleyLicense("lisansli")}
               />
               {" "}Lisanslı kişi başı 25 TL
+            </label>
+
+            <label>
+              <input
+                type="radio"
+                checked={volleyLicense === "ogrenci"}
+                onChange={() => setVolleyLicense("ogrenci")}
+              />
+              {" "}Öğrenci ücretsiz
             </label>
           </div>
         )}
@@ -583,6 +594,12 @@ if (
 
         <div style={{ background: "#111827", color: "white", padding: 18, borderRadius: 10, marginBottom: 15 }}>
           <h3 style={{ marginTop: 0 }}>Ödeme Bilgileri</h3>
+
+          {isStudentReservation && (
+            <p style={{ fontSize: 14, lineHeight: 1.6 }}>
+              Öğrenci rezervasyonları ücretsizdir. Dekont yerine öğrenci belgesi veya öğrenci kartı fotoğrafı yükleyebilirsiniz.
+            </p>
+          )}
 
           <p>
             {personCount} kişi x {unitPrice} TL ={" "}
@@ -623,7 +640,9 @@ if (
         </div>
 
         <label>
-          Dekont Yükle:
+          {isStudentReservation
+            ? "Öğrenci Belgesi / Öğrenci Kartı Fotoğrafı Yükle:"
+            : "Dekont Yükle:"}
           <input
             type="file"
             accept="image/*,.pdf"
