@@ -628,8 +628,24 @@ if (
             {IBAN}
           </div>
 
-          <button onClick={copyIban}>IBAN Kopyala</button>
+          <div style={{ marginTop: 12, marginBottom: 12 }}>
+            <button onClick={copyIban}>IBAN Kopyala</button>
+          </div>
 
+          <a
+            href="/SahaUcret_Tablo.pdf"
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: "inline-block",
+              marginBottom: 12,
+              color: "#60a5fa",
+              fontWeight: "bold",
+              textDecoration: "none",
+            }}
+          >
+            Tesis Kullanım Şartları ve Ücretlendirme Bilgileri (PDF)
+          </a>
           <p style={{ fontSize: 14, lineHeight: 1.6 }}>
             Banka açıklama kısmına mutlaka:
             <br />
