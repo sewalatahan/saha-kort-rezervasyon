@@ -39,6 +39,7 @@ function AdminPanel({
     adminSelectedDate.slice(0, 7)
   );
   const [monthlyReportCourt, setMonthlyReportCourt] = useState("all");
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false);
 
   function getReservationMonth(reservationDate) {
     if (!reservationDate) return "";
@@ -286,95 +287,116 @@ function AdminPanel({
             </div>
           ))}
 
-          <div
-            style={{
-              border: "1px solid #ddd",
-              padding: 15,
-              borderRadius: 10,
-              marginTop: 30,
-              marginBottom: 20,
-              background: "#f9fafb",
-            }}
-          >
-            <h3 style={{ marginTop: 0 }}>Aylık Dekont / Rapor Listesi</h3>
+          <div style={{ marginTop: 30, marginBottom: 20 }}>
+            <button
+              onClick={() => setShowMonthlyReport(!showMonthlyReport)}
+              style={{
+                padding: "12px 16px",
+                background: "#111827",
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                width: "100%",
+                fontWeight: "bold",
+              }}
+            >
+              {showMonthlyReport
+                ? "📊 Aylık Rapor ve Dekontları Gizle"
+                : "📊 Aylık Rapor ve Dekontlar"}
+            </button>
 
-            <div style={{ display: "grid", gap: 10, marginBottom: 15 }}>
-              <label>
-                Ay Seç:
-                <input
-                  type="month"
-                  value={monthlyReportMonth}
-                  onChange={(e) => setMonthlyReportMonth(e.target.value)}
-                  style={{ width: "100%", padding: 10, marginTop: 4 }}
-                />
-              </label>
-
-              <label>
-                Tesis Seç:
-                <select
-                  value={monthlyReportCourt}
-                  onChange={(e) => setMonthlyReportCourt(e.target.value)}
-                  style={{ width: "100%", padding: 10, marginTop: 4 }}
-                >
-                  <option value="all">Tümü</option>
-                  <option value="tenis">Tenis Kortu</option>
-                  <option value="salon">Çok Amaçlı Salon / Voleybol</option>
-                </select>
-              </label>
-            </div>
-
-            <p>
-              <strong>Rezervasyon Sayısı:</strong>{" "}
-              {monthlyReportReservations.length}
-            </p>
-            <p>
-              <strong>Toplam Tutar:</strong> {monthlyReportTotal} TL
-            </p>
-
-            {monthlyReportReservations.length === 0 && (
-              <p>Seçilen ay ve tesis için kayıt bulunamadı.</p>
-            )}
-
-            {monthlyReportReservations.length > 0 && (
-              <button
-                onClick={() => downloadReceipts(monthlyReceiptPaths)}
+            {showMonthlyReport && (
+              <div
                 style={{
-                  padding: "10px 14px",
-                  background: "black",
-                  color: "white",
-                  border: "none",
-                  borderRadius: 8,
-                  cursor: "pointer",
-                  marginBottom: 12,
+                  border: "1px solid #ddd",
+                  padding: 15,
+                  borderRadius: 10,
+                  marginTop: 12,
+                  background: "#f9fafb",
                 }}
               >
-                Seçilen Aydaki Dekontları ZIP İndir
-              </button>
-            )}
+                <h3 style={{ marginTop: 0 }}>Aylık Dekont / Rapor Listesi</h3>
 
-            {monthlyReportReservations.map((r) => (
-              <div
-                key={`monthly-${r.id}`}
-                style={{ padding: 10, borderTop: "1px solid #ddd" }}
-              >
-                <strong>{r.reservation_date}</strong> | {r.reservation_time} |{" "}
-                {r.court_name}
-                <br />
-                {r.full_name} | {r.phone}
-                <br />
-                Kişi: {r.person_count} | {r.pricing_type} | Tutar:{" "}
-                {r.total_price} TL
-                <br />
-                Dekont: {r.receipt_name}
-                <br />
-                <button
-                  onClick={() => openReceipt(r.receipt_url)}
-                  style={{ marginTop: 8 }}
-                >
-                  Dekontu Aç
-                </button>
+                <div style={{ display: "grid", gap: 10, marginBottom: 15 }}>
+                  <label>
+                    Ay Seç:
+                    <input
+                      type="month"
+                      value={monthlyReportMonth}
+                      onChange={(e) => setMonthlyReportMonth(e.target.value)}
+                      style={{ width: "100%", padding: 10, marginTop: 4 }}
+                    />
+                  </label>
+
+                  <label>
+                    Tesis Seç:
+                    <select
+                      value={monthlyReportCourt}
+                      onChange={(e) => setMonthlyReportCourt(e.target.value)}
+                      style={{ width: "100%", padding: 10, marginTop: 4 }}
+                    >
+                      <option value="all">Tümü</option>
+                      <option value="tenis">Tenis Kortu</option>
+                      <option value="salon">Çok Amaçlı Salon / Voleybol</option>
+                    </select>
+                  </label>
+                </div>
+
+                <p>
+                  <strong>Rezervasyon Sayısı:</strong>{" "}
+                  {monthlyReportReservations.length}
+                </p>
+                <p>
+                  <strong>Toplam Tutar:</strong> {monthlyReportTotal} TL
+                </p>
+
+                {monthlyReportReservations.length === 0 && (
+                  <p>Seçilen ay ve tesis için kayıt bulunamadı.</p>
+                )}
+
+                {monthlyReportReservations.length > 0 && (
+                  <button
+                    onClick={() => downloadReceipts(monthlyReceiptPaths)}
+                    style={{
+                      padding: "10px 14px",
+                      background: "black",
+                      color: "white",
+                      border: "none",
+                      borderRadius: 8,
+                      cursor: "pointer",
+                      marginBottom: 12,
+                    }}
+                  >
+                    Seçilen Aydaki Dekontları ZIP İndir
+                  </button>
+                )}
+
+                {monthlyReportReservations.map((r) => (
+                  <div
+                    key={`monthly-${r.id}`}
+                    style={{ padding: 10, borderTop: "1px solid #ddd" }}
+                  >
+                    <strong>{r.reservation_date}</strong> | {r.reservation_time} |{" "}
+                    {r.court_name}
+                    <br />
+                    {r.full_name} | {r.phone}
+                    <br />
+                    Kişi: {r.person_count} | {r.pricing_type} | Tutar:{" "}
+                    {r.total_price} TL
+                    <br />
+                    Dekont: {r.receipt_name}
+                    <br />
+                    <button
+                      onClick={() => openReceipt(r.receipt_url)}
+                      style={{ marginTop: 8 }}
+                    >
+                      Dekontu Aç
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
 
           <h3 style={{ marginTop: 30 }}>Rezervasyonlar</h3>
