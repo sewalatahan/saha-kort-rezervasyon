@@ -1,4 +1,6 @@
+import { useMemo, useState } from "react";
 import { courtsSeed, hours } from "../data/courts";
+
 
 function AdminPanel({
   adminOpen,
@@ -27,10 +29,89 @@ function AdminPanel({
   setAdminSelectedDate,
   adminClosedSlots,
   adminReservations,
+  reservations = [],
+  downloadReceipts,
   deleteClosedSlot,
   deleteReservation,
   openReceipt,
 }) {
+  const [monthlyReportMonth, setMonthlyReportMonth] = useState(
+    adminSelectedDate.slice(0, 7)
+  );
+  const [monthlyReportCourt, setMonthlyReportCourt] = useState("all");
+
+  function getReservationMonth(reservationDate) {
+    if (!reservationDate) return "";
+
+    if (reservationDate.includes("-")) {
+      return reservationDate.slice(0, 7);
+    }
+
+    if (reservationDate.includes(".")) {
+      const parts = reservationDate.split(".");
+
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1].padStart(2, "0")}`;
+      }
+    }
+
+    return "";
+  }
+
+  function getCourtType(reservation) {
+    const courtId = reservation.court_id?.toLowerCase() || "";
+    const courtName = reservation.court_name?.toLowerCase() || "";
+
+    if (courtId.includes("tenis") || courtName.includes("tenis")) {
+      return "tenis";
+    }
+
+    if (
+      courtId.includes("salon") ||
+      courtId.includes("voleybol") ||
+      courtName.includes("salon") ||
+      courtName.includes("voleybol")
+    ) {
+      return "salon";
+    }
+
+    return "";
+  }
+
+  const monthlyReportReservations = useMemo(() => {
+    return reservations
+      .filter((reservation) => {
+        const matchesMonth =
+          getReservationMonth(reservation.reservation_date) === monthlyReportMonth;
+
+        const matchesCourt =
+          monthlyReportCourt === "all" ||
+          getCourtType(reservation) === monthlyReportCourt;
+
+        return matchesMonth && matchesCourt;
+      })
+      .sort((a, b) => {
+        const dateCompare = String(a.reservation_date).localeCompare(
+          String(b.reservation_date)
+        );
+
+        if (dateCompare !== 0) return dateCompare;
+
+        return String(a.reservation_time).localeCompare(
+          String(b.reservation_time)
+        );
+      });
+  }, [reservations, monthlyReportMonth, monthlyReportCourt]);
+
+  const monthlyReportTotal = monthlyReportReservations.reduce(
+    (total, reservation) => total + Number(reservation.total_price || 0),
+    0
+  );
+
+  const monthlyReceiptPaths = monthlyReportReservations
+    .map((reservation) => reservation.receipt_url)
+    .filter(Boolean);
+
   return (
     <div>
       <h1 style={{ marginBottom: 20 }}>Yönetici Paneli</h1>
@@ -204,6 +285,97 @@ function AdminPanel({
               )}
             </div>
           ))}
+
+          <div
+            style={{
+              border: "1px solid #ddd",
+              padding: 15,
+              borderRadius: 10,
+              marginTop: 30,
+              marginBottom: 20,
+              background: "#f9fafb",
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>Aylık Dekont / Rapor Listesi</h3>
+
+            <div style={{ display: "grid", gap: 10, marginBottom: 15 }}>
+              <label>
+                Ay Seç:
+                <input
+                  type="month"
+                  value={monthlyReportMonth}
+                  onChange={(e) => setMonthlyReportMonth(e.target.value)}
+                  style={{ width: "100%", padding: 10, marginTop: 4 }}
+                />
+              </label>
+
+              <label>
+                Tesis Seç:
+                <select
+                  value={monthlyReportCourt}
+                  onChange={(e) => setMonthlyReportCourt(e.target.value)}
+                  style={{ width: "100%", padding: 10, marginTop: 4 }}
+                >
+                  <option value="all">Tümü</option>
+                  <option value="tenis">Tenis Kortu</option>
+                  <option value="salon">Çok Amaçlı Salon / Voleybol</option>
+                </select>
+              </label>
+            </div>
+
+            <p>
+              <strong>Rezervasyon Sayısı:</strong>{" "}
+              {monthlyReportReservations.length}
+            </p>
+            <p>
+              <strong>Toplam Tutar:</strong> {monthlyReportTotal} TL
+            </p>
+
+            {monthlyReportReservations.length === 0 && (
+              <p>Seçilen ay ve tesis için kayıt bulunamadı.</p>
+            )}
+
+            {monthlyReportReservations.length > 0 && (
+              <button
+                onClick={() => downloadReceipts(monthlyReceiptPaths)}
+                style={{
+                  padding: "10px 14px",
+                  background: "black",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  marginBottom: 12,
+                }}
+              >
+                Seçilen Aydaki Dekontları ZIP İndir
+              </button>
+            )}
+
+            {monthlyReportReservations.map((r) => (
+              <div
+                key={`monthly-${r.id}`}
+                style={{ padding: 10, borderTop: "1px solid #ddd" }}
+              >
+                <strong>{r.reservation_date}</strong> | {r.reservation_time} |{" "}
+                {r.court_name}
+                <br />
+                {r.full_name} | {r.phone}
+                <br />
+                Kişi: {r.person_count} | {r.pricing_type} | Tutar:{" "}
+                {r.total_price} TL
+                <br />
+                Dekont: {r.receipt_name}
+                <br />
+                <button
+                  onClick={() => openReceipt(r.receipt_url)}
+                  style={{ marginTop: 8 }}
+                >
+                  Dekontu Aç
+                </button>
+              </div>
+            ))}
+          </div>
 
           <h3 style={{ marginTop: 30 }}>Rezervasyonlar</h3>
 

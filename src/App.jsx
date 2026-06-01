@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import JSZip from "jszip";
 import { supabase } from "./supabase";
 import { courtsSeed, hours, IBAN, ALICI } from "./data/courts";
 import {
@@ -180,6 +181,58 @@ function App() {
     }
 
     window.open(data.signedUrl, "_blank");
+  }
+
+  async function downloadReceipts(receiptPaths) {
+    if (!receiptPaths || receiptPaths.length === 0) {
+      alert("İndirilecek dekont bulunamadı.");
+      return;
+    }
+
+    const zip = new JSZip();
+    let addedFileCount = 0;
+
+    for (const path of receiptPaths) {
+      const { data, error } = await supabase.storage
+        .from("dekontlar")
+        .createSignedUrl(path, 60);
+
+      if (error) {
+        console.log("Dekont indirilemedi:", path, error.message);
+        continue;
+      }
+
+      try {
+        const response = await fetch(data.signedUrl);
+
+        if (!response.ok) {
+          console.log("Dekont indirilemedi:", path, response.status);
+          continue;
+        }
+
+        const blob = await response.blob();
+        const fileName = path.split("/").pop() || `dekont-${addedFileCount + 1}`;
+        zip.file(fileName, blob);
+        addedFileCount += 1;
+      } catch (error) {
+        console.log("Dekont ZIP'e eklenemedi:", path, error);
+      }
+    }
+
+    if (addedFileCount === 0) {
+      alert("ZIP dosyasına eklenecek dekont bulunamadı.");
+      return;
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    const link = document.createElement("a");
+    link.href = zipUrl;
+    link.download = "dekontlar.zip";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(zipUrl);
   }
 
   async function deleteReservation(id) {
@@ -387,6 +440,8 @@ if (
           setAdminSelectedDate={setAdminSelectedDate}
           adminClosedSlots={adminClosedSlots}
           adminReservations={adminReservations}
+          reservations={reservations}
+          downloadReceipts={downloadReceipts}
           deleteClosedSlot={deleteClosedSlot}
           deleteReservation={deleteReservation}
           openReceipt={openReceipt}
