@@ -268,10 +268,26 @@ function App() {
       return;
     }
 
-    if (!selectedTime || !name || !phone || !personCount || !receiptFile) {
-      alert("Ad soyad, telefon, kişi sayısı, saat seçimi ve dekont zorunludur.");
+    if (!selectedTime) {
+      alert("Lütfen yukarıdaki BOŞ saat kutularından birine tıklayınız. Seçilen saat siyah renkte görünmelidir.");
       return;
     }
+
+    if (!name.trim()) {
+      alert("Lütfen ad soyad bilgisini giriniz.");
+      return;
+    }
+
+    if (!phone.trim()) {
+      alert("Lütfen telefon numarası bilgisini giriniz.");
+      return;
+    }
+
+    if (!personCount || Number(personCount) < 1) {
+      alert("Lütfen kişi sayısını giriniz.");
+      return;
+    }
+
 
     if (reservedTimes.includes(selectedTime)) {
       alert("Bu saat dolu.");
@@ -282,18 +298,40 @@ function App() {
       alert("Bu saat kapalı.");
       return;
     }
-const normalizedName = name.trim().toLocaleUpperCase("tr-TR");
+const normalizePersonName = (value) =>
+  String(value || "")
+    .trim()
+    .toLocaleUpperCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
+
+const normalizedName = normalizePersonName(name);
+const normalizedPhone = normalizePhone(phone);
 
 const sameDaySameNameReservations = reservations.filter((reservation) => {
+  const reservationName = normalizePersonName(reservation.full_name);
+  const reservationPhone = normalizePhone(reservation.phone);
+
   return (
     reservation.reservation_date === selectedDate &&
     reservation.court_id === selectedCourt &&
-    reservation.full_name.trim().toLocaleUpperCase("tr-TR") === normalizedName
+    (reservationName === normalizedName || reservationPhone === normalizedPhone)
   );
 });
 
 if (selectedCourt === "salon" && sameDaySameNameReservations.length >= 1) {
   alert("Aynı kişi aynı gün Çok Amaçlı Salon için sadece 1 saat rezervasyon yapabilir.");
+  return;
+}
+
+if (
+  selectedCourt === "tenis" &&
+  tennisCategory === "ogrenci" &&
+  sameDaySameNameReservations.length >= 1
+) {
+  alert("Tenis Kortu için aynı gün sadece 1 saat rezervasyon yapılabilir.");
   return;
 }
 
@@ -308,6 +346,16 @@ if (
   alert("Aynı kişi saat 17:00'ye kadar Tenis Kortu için aynı gün en fazla 2 saat rezervasyon yapabilir.");
   return;
 }
+
+    if (!receiptFile) {
+      alert(
+        isStudentReservation
+          ? "Lütfen öğrenci belgesi veya öğrenci kartı fotoğrafı yükleyiniz."
+          : "Lütfen ödeme dekontunu yükleyiniz."
+      );
+      return;
+    }
+
     const safeFileName = receiptFile.name
       .replaceAll(" ", "-")
       .replace(/[çÇ]/g, "c")
@@ -565,6 +613,9 @@ if (
 
       <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 10 }}>
         <h2>Rezervasyon Yap</h2>
+        <p style={{ fontWeight: "bold", color: selectedTime ? "#111827" : "#991b1b" }}>
+          Seçilen Saat: {selectedTime || "Henüz saat seçilmedi"}
+        </p>
 
         <input
           placeholder="Ad Soyad"

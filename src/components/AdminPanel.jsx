@@ -113,6 +113,54 @@ function AdminPanel({
     .map((reservation) => reservation.receipt_url)
     .filter(Boolean);
 
+  const tennisReservations = adminReservations
+    .filter((reservation) => getCourtType(reservation) === "tenis")
+    .sort((a, b) =>
+      String(a.reservation_time).localeCompare(String(b.reservation_time))
+    );
+
+  const salonReservations = adminReservations
+    .filter((reservation) => getCourtType(reservation) === "salon")
+    .sort((a, b) =>
+      String(a.reservation_time).localeCompare(String(b.reservation_time))
+    );
+
+  function renderReservationCard(r) {
+    return (
+      <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
+        <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
+        <br />
+        {r.full_name} | {r.phone}
+        <br />
+        Kişi: {r.person_count} | {r.pricing_type} | {r.total_price} TL
+        <br />
+        Dekont: {r.receipt_name}
+
+        <div style={{ marginTop: 8 }}>
+          <button onClick={() => openReceipt(r.receipt_url)}>
+            Dekontu Aç
+          </button>
+
+          {adminRole === "full" && (
+            <button
+              onClick={() => deleteReservation(r.id)}
+              style={{
+                marginLeft: 8,
+                background: "#991b1b",
+                color: "white",
+                border: "none",
+                padding: "6px 10px",
+                borderRadius: 6,
+              }}
+            >
+              Rezervasyonu Sil
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 style={{ marginBottom: 20 }}>Yönetici Paneli</h1>
@@ -403,39 +451,70 @@ function AdminPanel({
 
           {adminReservations.length === 0 && <p>Seçilen tarihte rezervasyon yok.</p>}
 
-          {adminReservations.map((r) => (
-            <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
-              <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
-              <br />
-              {r.full_name} | {r.phone}
-              <br />
-              Kişi: {r.person_count} | {r.pricing_type} | {r.total_price} TL
-              <br />
-              Dekont: {r.receipt_name}
-
-              <div style={{ marginTop: 8 }}>
-                <button onClick={() => openReceipt(r.receipt_url)}>
-                  Dekontu Aç
-                </button>
-
-                {adminRole === "full" && (
-                  <button
-                    onClick={() => deleteReservation(r.id)}
+          {adminReservations.length > 0 && (
+            <div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns:
+                    window.innerWidth < 768 ? "1fr" : "1fr 1fr",
+                  gap: 16,
+                }}
+              >
+                <div
+                  style={{
+                    border: "1px solid #ddd",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    background: "white",
+                  }}
+                >
+                  <h4
                     style={{
-                      marginLeft: 8,
-                      background: "#991b1b",
+                      margin: 0,
+                      padding: 12,
+                      background: "#111827",
                       color: "white",
-                      border: "none",
-                      padding: "6px 10px",
-                      borderRadius: 6,
                     }}
                   >
-                    Rezervasyonu Sil
-                  </button>
-                )}
+                    Tenis Kortu Rezervasyonları
+                  </h4>
+
+                  {tennisReservations.length === 0 ? (
+                    <p style={{ padding: 12 }}>Seçilen tarihte tenis rezervasyonu yok.</p>
+                  ) : (
+                    tennisReservations.map(renderReservationCard)
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    border: "1px solid #ddd",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    background: "white",
+                  }}
+                >
+                  <h4
+                    style={{
+                      margin: 0,
+                      padding: 12,
+                      background: "#111827",
+                      color: "white",
+                    }}
+                  >
+                    Çok Amaçlı Salon / Voleybol Rezervasyonları
+                  </h4>
+
+                  {salonReservations.length === 0 ? (
+                    <p style={{ padding: 12 }}>Seçilen tarihte salon rezervasyonu yok.</p>
+                  ) : (
+                    salonReservations.map(renderReservationCard)
+                  )}
+                </div>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>
