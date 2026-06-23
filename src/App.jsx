@@ -499,15 +499,25 @@ if (
   }
 
   return (
-    <div style={{ maxWidth: 950, margin: "0 auto", padding: 20, fontFamily: "Arial" }}>
+    <div
+      style={{
+        maxWidth: 1050,
+        margin: "0 auto",
+        padding: "28px 20px",
+        fontFamily: "Arial",
+        color: "#0f172a",
+      }}
+    >
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          gap: 16,
-          marginBottom: 24,
+          gap: 18,
+          marginBottom: 28,
           textAlign: "left",
+          borderBottom: "2px solid #1d4ed8",
+          paddingBottom: 18,
         }}
       >
         <img
@@ -535,8 +545,9 @@ if (
           <h1
             style={{
               margin: 0,
-              fontSize: 44,
+              fontSize: 42,
               lineHeight: 1.05,
+              color: "#0b2f6b",
             }}
           >
             Saha & Kort Rezervasyon
@@ -546,59 +557,276 @@ if (
 
       <div
         style={{
-          marginBottom: 20,
-          display: "flex",
-          gap: 10,
-          justifyContent: "center",
-          flexWrap: "wrap",
+          marginBottom: 24,
+          padding: 22,
+          borderRadius: 12,
+          border: "1px solid #dbe3ef",
+          background: "#ffffff",
+          boxShadow: "0 8px 24px rgba(15, 23, 42, 0.08)",
         }}
       >
-        <select
-          value={selectedCourt}
-          onChange={handleCourtChange}
+        <div style={{ marginBottom: 18 }}>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 22,
+              color: "#0b2f6b",
+              letterSpacing: 0.3,
+              textTransform: "uppercase",
+            }}
+          >
+            Tesis Seçimi
+          </h2>
+          <p style={{ margin: "6px 0 0", color: "#475569", fontSize: 15 }}>
+            Rezervasyon yapmak istediğiniz tesisi ve tarihi seçin.
+          </p>
+        </div>
+
+        <div
           style={{
-            fontSize: 20,
-            padding: "10px 14px",
-            borderRadius: 8,
-            border: "1px solid #ccc",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: 14,
+            marginBottom: 20,
           }}
         >
-          {courtsSeed.map((court) => (
-            <option key={court.id} value={court.id}>
-              {court.name}
-            </option>
-          ))}
-        </select>
+          <button
+            type="button"
+            onClick={() => {
+              handleCourtChange({ target: { value: "tenis" } });
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 14,
+              padding: "18px 20px",
+              borderRadius: 10,
+              border:
+                selectedCourt === "tenis"
+                  ? "2px solid #1d4ed8"
+                  : "1px solid #cbd5e1",
+              background: selectedCourt === "tenis" ? "#eff6ff" : "#ffffff",
+              color: "#0f172a",
+              cursor: "pointer",
+              textAlign: "left",
+              boxShadow:
+                selectedCourt === "tenis"
+                  ? "0 8px 18px rgba(29, 78, 216, 0.12)"
+                  : "0 4px 12px rgba(15, 23, 42, 0.04)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div
+                style={{
+                  width: 68,
+                  height: 68,
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#0b5ed7",
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="58" height="58" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                  <ellipse cx="36" cy="22" rx="14" ry="18" transform="rotate(38 36 22)" stroke="currentColor" strokeWidth="3" />
+                  <path d="M26 32L10 49" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                  <path d="M19 42L13 48" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+                  <path d="M28 14C35 18 41 24 45 31" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M22 20C30 24 36 30 40 37" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M36 7C32 16 27 24 19 30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M45 15C39 24 33 31 26 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <circle cx="46" cy="47" r="5" stroke="currentColor" strokeWidth="3" />
+                  <path d="M43 47H49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M46 44V50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: "bold" }}>Tenis Kortu</div>
+                <div style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
+                  Tenis kortu rezervasyonu yapın.
+                </div>
+              </div>
+            </div>
+            {selectedCourt === "tenis" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span
+                  style={{
+                    padding: "7px 12px",
+                    borderRadius: 6,
+                    background: "#1d4ed8",
+                    color: "white",
+                    fontWeight: "bold",
+                    fontSize: 13,
+                  }}
+                >
+                  Seçili
+                </span>
+                <span
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    background: "#1d4ed8",
+                    color: "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  ✓
+                </span>
+              </div>
+            )}
+          </button>
 
-        <input
-          type="date"
-          value={selectedDate}
-          min={selectedCourt === "tenis" ? getToday() : getWeekRange().start}
-          max={selectedCourt === "tenis" ? getMaxTenisDate() : getWeekRange().end}
-          onChange={(e) => {
-            setSelectedDate(e.target.value);
-            setSelectedTime("");
-          }}
+          <button
+            type="button"
+            onClick={() => {
+              handleCourtChange({ target: { value: "salon" } });
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 14,
+              padding: "18px 20px",
+              borderRadius: 10,
+              border:
+                selectedCourt === "salon"
+                  ? "2px solid #1d4ed8"
+                  : "1px solid #cbd5e1",
+              background: selectedCourt === "salon" ? "#eff6ff" : "#ffffff",
+              color: "#0f172a",
+              cursor: "pointer",
+              textAlign: "left",
+              boxShadow:
+                selectedCourt === "salon"
+                  ? "0 8px 18px rgba(29, 78, 216, 0.12)"
+                  : "0 4px 12px rgba(15, 23, 42, 0.04)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <div
+                style={{
+                  width: 68,
+                  height: 68,
+                  display: "grid",
+                  placeItems: "center",
+                  color: "#475569",
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="58" height="58" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                  <path d="M10 51V21C10 12 20 7 32 7C44 7 54 12 54 21V51" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M14 30H50" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                  <path d="M17 25C22 31 42 31 47 25" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M18 36H46" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  <path d="M22 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M30 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M38 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M46 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M18 42H46" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontSize: 19, fontWeight: "bold" }}>
+                  Çok Amaçlı Salon / Voleybol
+                </div>
+                <div style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
+                  Salon rezervasyonu yapın.
+                </div>
+              </div>
+            </div>
+            {selectedCourt === "salon" && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span
+                  style={{
+                    padding: "7px 12px",
+                    borderRadius: 6,
+                    background: "#1d4ed8",
+                    color: "white",
+                    fontWeight: "bold",
+                    fontSize: 13,
+                  }}
+                >
+                  Seçili
+                </span>
+                <span
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    display: "grid",
+                    placeItems: "center",
+                    background: "#1d4ed8",
+                    color: "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  ✓
+                </span>
+              </div>
+            )}
+          </button>
+        </div>
+
+        <div
           style={{
-            fontSize: 20,
-            padding: "10px 14px",
-            borderRadius: 8,
-            border: "1px solid #ccc",
+            display: "flex",
+            gap: 12,
+            alignItems: "center",
+            justifyContent: "center",
+            flexWrap: "wrap",
           }}
-        />
+        >
+          <label style={{ fontWeight: "bold", color: "#0b2f6b", fontSize: 15 }}>
+            Tarih
+          </label>
+          <input
+            type="date"
+            value={selectedDate}
+            min={selectedCourt === "tenis" ? getToday() : getWeekRange().start}
+            max={selectedCourt === "tenis" ? getMaxTenisDate() : getWeekRange().end}
+            onChange={(e) => {
+              setSelectedDate(e.target.value);
+              setSelectedTime("");
+            }}
+            style={{
+              fontSize: 18,
+              padding: "10px 14px",
+              borderRadius: 8,
+              border: "1px solid #b7c7e6",
+              background: "#ffffff",
+              color: "#0f172a",
+              outline: "none",
+            }}
+          />
+        </div>
       </div>
 
-      <p style={{ color: "#555" }}>
+      <div
+        style={{
+          marginBottom: 18,
+          padding: "12px 14px",
+          borderRadius: 8,
+          border: "1px solid #bfdbfe",
+          background: "#eff6ff",
+          color: "#0b2f6b",
+          fontSize: 15,
+        }}
+      >
         {selectedCourt === "salon"
           ? "Çok Amaçlı Salon için sadece bulunduğunuz hafta içinde rezervasyon yapılabilir."
           : "Tenis Kortu için sadece bugün, yarın ve sonraki gün rezervasyon yapılabilir."}
-      </p>
+      </div>
+
+      <h3 style={{ color: "#0b2f6b", marginBottom: 12 }}>Uygun Saatler</h3>
 
       <div
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(3,1fr)",
-          gap: 10,
+          gap: 12,
           marginBottom: 30,
         }}
       >
@@ -612,18 +840,32 @@ if (
               disabled={isReserved || isClosed}
               onClick={() => setSelectedTime(hour)}
               style={{
-                padding: 20,
-                borderRadius: 10,
-                border: "1px solid #ccc",
-                background: isClosed
-                  ? "#991b1b"
+                padding: "18px 12px",
+                borderRadius: 8,
+                border: isClosed
+                  ? "1px solid #fecaca"
                   : isReserved
-                  ? "#ddd"
+                  ? "1px solid #d1d5db"
                   : selectedTime === hour
-                  ? "black"
-                  : "white",
-                color: selectedTime === hour || isClosed ? "white" : "black",
+                  ? "2px solid #1d4ed8"
+                  : "1px solid #dbe3ef",
+                background: isClosed
+                  ? "#fef2f2"
+                  : isReserved
+                  ? "#e5e7eb"
+                  : selectedTime === hour
+                  ? "#eff6ff"
+                  : "#ffffff",
+                color: isClosed
+                  ? "#dc2626"
+                  : isReserved
+                  ? "#374151"
+                  : selectedTime === hour
+                  ? "#1d4ed8"
+                  : "#0b2f6b",
                 cursor: isReserved || isClosed ? "not-allowed" : "pointer",
+                fontWeight: "bold",
+                boxShadow: "0 4px 12px rgba(15, 23, 42, 0.04)",
               }}
             >
               <div>{hour}</div>
