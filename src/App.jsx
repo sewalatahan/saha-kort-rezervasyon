@@ -585,7 +585,7 @@ if (
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
             gap: 14,
             marginBottom: 20,
           }}
@@ -596,6 +596,9 @@ if (
               handleCourtChange({ target: { value: "tenis" } });
             }}
             style={{
+              position: "relative",
+              minHeight: 120,
+              overflow: "hidden",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -616,18 +619,18 @@ if (
                   : "0 4px 12px rgba(15, 23, 42, 0.04)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 96, minWidth: 0 }}>
               <div
                 style={{
-                  width: 68,
-                  height: 68,
+                  width: 54,
+                  height: 54,
                   display: "grid",
                   placeItems: "center",
                   color: "#0b5ed7",
                   flexShrink: 0,
                 }}
               >
-                <svg width="58" height="58" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <svg width="48" height="48" viewBox="0 0 64 64" fill="none" aria-hidden="true">
                   <ellipse cx="36" cy="22" rx="14" ry="18" transform="rotate(38 36 22)" stroke="currentColor" strokeWidth="3" />
                   <path d="M26 32L10 49" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
                   <path d="M19 42L13 48" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
@@ -641,17 +644,27 @@ if (
                 </svg>
               </div>
               <div>
-                <div style={{ fontSize: 19, fontWeight: "bold" }}>Tenis Kortu</div>
+                <div style={{ fontSize: 18, fontWeight: "bold", lineHeight: 1.2 }}>Tenis Kortu</div>
                 <div style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
                   Tenis kortu rezervasyonu yapın.
                 </div>
               </div>
             </div>
             {selectedCourt === "tenis" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
                 <span
                   style={{
-                    padding: "7px 12px",
+                    padding: "6px 9px",
                     borderRadius: 6,
                     background: "#1d4ed8",
                     color: "white",
@@ -663,8 +676,8 @@ if (
                 </span>
                 <span
                   style={{
-                    width: 30,
-                    height: 30,
+                    width: 28,
+                    height: 28,
                     borderRadius: "50%",
                     display: "grid",
                     placeItems: "center",
@@ -685,6 +698,9 @@ if (
               handleCourtChange({ target: { value: "salon" } });
             }}
             style={{
+              position: "relative",
+              minHeight: 120,
+              overflow: "hidden",
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -705,18 +721,18 @@ if (
                   : "0 4px 12px rgba(15, 23, 42, 0.04)",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 96, minWidth: 0 }}>
               <div
                 style={{
-                  width: 68,
-                  height: 68,
+                  width: 54,
+                  height: 54,
                   display: "grid",
                   placeItems: "center",
                   color: "#475569",
                   flexShrink: 0,
                 }}
               >
-                <svg width="58" height="58" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+                <svg width="48" height="48" viewBox="0 0 64 64" fill="none" aria-hidden="true">
                   <path d="M10 51V21C10 12 20 7 32 7C44 7 54 12 54 21V51" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   <path d="M14 30H50" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                   <path d="M17 25C22 31 42 31 47 25" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -729,7 +745,7 @@ if (
                 </svg>
               </div>
               <div>
-                <div style={{ fontSize: 19, fontWeight: "bold" }}>
+                <div style={{ fontSize: 18, fontWeight: "bold", lineHeight: 1.2 }}>
                   Çok Amaçlı Salon / Voleybol
                 </div>
                 <div style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
@@ -738,10 +754,20 @@ if (
               </div>
             </div>
             {selectedCourt === "salon" && (
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  position: "absolute",
+                  right: 12,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
                 <span
                   style={{
-                    padding: "7px 12px",
+                    padding: "6px 9px",
                     borderRadius: 6,
                     background: "#1d4ed8",
                     color: "white",
@@ -753,8 +779,8 @@ if (
                 </span>
                 <span
                   style={{
-                    width: 30,
-                    height: 30,
+                    width: 28,
+                    height: 28,
                     borderRadius: "50%",
                     display: "grid",
                     placeItems: "center",
