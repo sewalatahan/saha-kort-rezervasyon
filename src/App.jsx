@@ -16,7 +16,7 @@ function App() {
   const [reservations, setReservations] = useState([]);
   const [closedSlots, setClosedSlots] = useState([]);
 
-  const [selectedCourt, setSelectedCourt] = useState("salon");
+  const [selectedCourt, setSelectedCourt] = useState("tenis");
   const [selectedDate, setSelectedDate] = useState(getToday());
   const [selectedTime, setSelectedTime] = useState("");
 
@@ -544,8 +544,25 @@ if (
         </div>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        <select value={selectedCourt} onChange={handleCourtChange}>
+      <div
+        style={{
+          marginBottom: 20,
+          display: "flex",
+          gap: 10,
+          justifyContent: "center",
+          flexWrap: "wrap",
+        }}
+      >
+        <select
+          value={selectedCourt}
+          onChange={handleCourtChange}
+          style={{
+            fontSize: 20,
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #ccc",
+          }}
+        >
           {courtsSeed.map((court) => (
             <option key={court.id} value={court.id}>
               {court.name}
@@ -562,7 +579,12 @@ if (
             setSelectedDate(e.target.value);
             setSelectedTime("");
           }}
-          style={{ marginLeft: 10 }}
+          style={{
+            fontSize: 20,
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #ccc",
+          }}
         />
       </div>
 
