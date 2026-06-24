@@ -11,6 +11,7 @@ import {
 } from "./utils/dateRules";
 import { calculatePricing } from "./utils/pricing";
 import AdminPanel from "./components/AdminPanel";
+import FacilityCard from "./components/FacilityCard";
 
 function App() {
   const [reservations, setReservations] = useState([]);
@@ -446,6 +447,35 @@ if (
     }
   }
 
+  const tennisIcon = (
+    <svg width="48" height="48" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <ellipse cx="36" cy="22" rx="14" ry="18" transform="rotate(38 36 22)" stroke="currentColor" strokeWidth="3" />
+      <path d="M26 32L10 49" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+      <path d="M19 42L13 48" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+      <path d="M28 14C35 18 41 24 45 31" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M22 20C30 24 36 30 40 37" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M36 7C32 16 27 24 19 30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M45 15C39 24 33 31 26 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <circle cx="46" cy="47" r="5" stroke="currentColor" strokeWidth="3" />
+      <path d="M43 47H49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M46 44V50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+
+  const salonIcon = (
+    <svg width="48" height="48" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <path d="M10 51V21C10 12 20 7 32 7C44 7 54 12 54 21V51" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <path d="M14 30H50" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+      <path d="M17 25C22 31 42 31 47 25" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M18 36H46" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M22 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M30 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M38 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M46 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path d="M18 42H46" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    </svg>
+  );
+
   if (showAdminPanel) {
     return (
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: 20, fontFamily: "Arial" }}>
@@ -590,210 +620,23 @@ if (
             marginBottom: 20,
           }}
         >
-          <button
-            type="button"
-            onClick={() => {
-              handleCourtChange({ target: { value: "tenis" } });
-            }}
-            style={{
-              position: "relative",
-              minHeight: 120,
-              overflow: "hidden",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 14,
-              padding: "18px 20px",
-              borderRadius: 10,
-              border:
-                selectedCourt === "tenis"
-                  ? "2px solid #1d4ed8"
-                  : "1px solid #cbd5e1",
-              background: selectedCourt === "tenis" ? "#eff6ff" : "#ffffff",
-              color: "#0f172a",
-              cursor: "pointer",
-              textAlign: "left",
-              boxShadow:
-                selectedCourt === "tenis"
-                  ? "0 8px 18px rgba(29, 78, 216, 0.12)"
-                  : "0 4px 12px rgba(15, 23, 42, 0.04)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 96, minWidth: 0 }}>
-              <div
-                style={{
-                  width: 54,
-                  height: 54,
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#0b5ed7",
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="48" height="48" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                  <ellipse cx="36" cy="22" rx="14" ry="18" transform="rotate(38 36 22)" stroke="currentColor" strokeWidth="3" />
-                  <path d="M26 32L10 49" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-                  <path d="M19 42L13 48" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
-                  <path d="M28 14C35 18 41 24 45 31" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M22 20C30 24 36 30 40 37" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M36 7C32 16 27 24 19 30" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M45 15C39 24 33 31 26 38" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <circle cx="46" cy="47" r="5" stroke="currentColor" strokeWidth="3" />
-                  <path d="M43 47H49" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M46 44V50" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: "bold", lineHeight: 1.2 }}>Tenis Kortu</div>
-                <div style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
-                  Tenis kortu rezervasyonu yapın.
-                </div>
-              </div>
-            </div>
-            {selectedCourt === "tenis" && (
-              <div
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <span
-                  style={{
-                    padding: "6px 9px",
-                    borderRadius: 6,
-                    background: "#1d4ed8",
-                    color: "white",
-                    fontWeight: "bold",
-                    fontSize: 13,
-                  }}
-                >
-                  Seçili
-                </span>
-                <span
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    display: "grid",
-                    placeItems: "center",
-                    background: "#1d4ed8",
-                    color: "white",
-                    fontWeight: "bold",
-                  }}
-                >
-                  ✓
-                </span>
-              </div>
-            )}
-          </button>
+          <FacilityCard
+            title="Tenis Kortu"
+            description="Tenis kortu rezervasyonu yapın."
+            icon={tennisIcon}
+            iconColor="#0b5ed7"
+            isSelected={selectedCourt === "tenis"}
+            onClick={() => handleCourtChange({ target: { value: "tenis" } })}
+          />
 
-          <button
-            type="button"
-            onClick={() => {
-              handleCourtChange({ target: { value: "salon" } });
-            }}
-            style={{
-              position: "relative",
-              minHeight: 120,
-              overflow: "hidden",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 14,
-              padding: "18px 20px",
-              borderRadius: 10,
-              border:
-                selectedCourt === "salon"
-                  ? "2px solid #1d4ed8"
-                  : "1px solid #cbd5e1",
-              background: selectedCourt === "salon" ? "#eff6ff" : "#ffffff",
-              color: "#0f172a",
-              cursor: "pointer",
-              textAlign: "left",
-              boxShadow:
-                selectedCourt === "salon"
-                  ? "0 8px 18px rgba(29, 78, 216, 0.12)"
-                  : "0 4px 12px rgba(15, 23, 42, 0.04)",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 12, paddingRight: 96, minWidth: 0 }}>
-              <div
-                style={{
-                  width: 54,
-                  height: 54,
-                  display: "grid",
-                  placeItems: "center",
-                  color: "#475569",
-                  flexShrink: 0,
-                }}
-              >
-                <svg width="48" height="48" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-                  <path d="M10 51V21C10 12 20 7 32 7C44 7 54 12 54 21V51" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  <path d="M14 30H50" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                  <path d="M17 25C22 31 42 31 47 25" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  <path d="M18 36H46" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                  <path d="M22 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M30 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M38 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M46 30V42" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                  <path d="M18 42H46" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontSize: 18, fontWeight: "bold", lineHeight: 1.2 }}>
-                  Çok Amaçlı Salon / Voleybol
-                </div>
-                <div style={{ color: "#64748b", marginTop: 4, fontSize: 14 }}>
-                  Salon rezervasyonu yapın.
-                </div>
-              </div>
-            </div>
-            {selectedCourt === "salon" && (
-              <div
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                <span
-                  style={{
-                    padding: "6px 9px",
-                    borderRadius: 6,
-                    background: "#1d4ed8",
-                    color: "white",
-                    fontWeight: "bold",
-                    fontSize: 13,
-                  }}
-                >
-                  Seçili
-                </span>
-                <span
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: "50%",
-                    display: "grid",
-                    placeItems: "center",
-                    background: "#1d4ed8",
-                    color: "white",
-                    fontWeight: "bold",
-                  }}
-                >
-                  ✓
-                </span>
-              </div>
-            )}
-          </button>
+          <FacilityCard
+            title="Çok Amaçlı Salon / Voleybol"
+            description="Salon rezervasyonu yapın."
+            icon={salonIcon}
+            iconColor="#475569"
+            isSelected={selectedCourt === "salon"}
+            onClick={() => handleCourtChange({ target: { value: "salon" } })}
+          />
         </div>
 
         <div
