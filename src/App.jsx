@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import JSZip from "jszip";
 import { supabase } from "./supabase";
 import { courtsSeed, hours, IBAN, ALICI } from "./data/courts";
+
 import {
   getToday,
   getWeekRange,
@@ -290,7 +291,19 @@ function App() {
     }
 
 
-    if (reservedTimes.includes(selectedTime)) {
+    const { data: selectedSlotReservations, error: selectedSlotError } = await supabase
+      .from("reservations")
+      .select("id")
+      .eq("reservation_date", selectedDate)
+      .eq("court_id", selectedCourt)
+      .eq("reservation_time", selectedTime);
+
+    if (selectedSlotError) {
+      alert("Saat doluluk kontrolü yapılamadı: " + selectedSlotError.message);
+      return;
+    }
+
+    if ((selectedSlotReservations || []).length > 0) {
       alert("Bu saat dolu.");
       return;
     }
@@ -304,25 +317,51 @@ const normalizePersonName = (value) =>
     .trim()
     .toLocaleUpperCase("tr-TR")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
 
-const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
+const normalizePhone = (value) => {
+  const digits = String(value || "").replace(/\D/g, "");
+
+  if (digits.startsWith("90") && digits.length === 12) {
+    return digits.slice(2);
+  }
+
+  if (digits.startsWith("0") && digits.length === 11) {
+    return digits.slice(1);
+  }
+
+  if (digits.length > 10) {
+    return digits.slice(-10);
+  }
+
+  return digits;
+};
 
 const normalizedName = normalizePersonName(name);
 const normalizedPhone = normalizePhone(phone);
 
-const sameDaySameNameReservations = reservations.filter((reservation) => {
-  const reservationName = normalizePersonName(reservation.full_name);
-  const reservationPhone = normalizePhone(reservation.phone);
+const { data: latestSameDayReservations, error: sameDayError } = await supabase
+  .from("reservations")
+  .select("id, full_name, phone, reservation_date, reservation_time, court_id")
+  .eq("reservation_date", selectedDate)
+  .eq("court_id", selectedCourt);
 
-  return (
-    reservation.reservation_date === selectedDate &&
-    reservation.court_id === selectedCourt &&
-    (reservationName === normalizedName || reservationPhone === normalizedPhone)
-  );
-});
+if (sameDayError) {
+  alert("Rezervasyon kontrolü yapılamadı: " + sameDayError.message);
+  return;
+}
 
-if (selectedCourt === "salon" && sameDaySameNameReservations.length >= 1) {
+const sameDaySamePersonReservations = (latestSameDayReservations || []).filter(
+  (reservation) => {
+    const reservationName = normalizePersonName(reservation.full_name);
+    const reservationPhone = normalizePhone(reservation.phone);
+
+    return reservationName === normalizedName || reservationPhone === normalizedPhone;
+  }
+);
+
+if (selectedCourt === "salon" && sameDaySamePersonReservations.length >= 1) {
   alert("Aynı kişi aynı gün Çok Amaçlı Salon için sadece 1 saat rezervasyon yapabilir.");
   return;
 }
@@ -330,21 +369,27 @@ if (selectedCourt === "salon" && sameDaySameNameReservations.length >= 1) {
 if (
   selectedCourt === "tenis" &&
   tennisCategory === "ogrenci" &&
-  sameDaySameNameReservations.length >= 1
+  sameDaySamePersonReservations.length >= 1
 ) {
   alert("Tenis Kortu için aynı gün sadece 1 saat rezervasyon yapılabilir.");
   return;
 }
 
+const isToday = selectedDate === getToday();
 const currentHour = new Date().getHours();
 const isAfterFivePm = currentHour >= 17;
+const adultTenisLimit = isToday && isAfterFivePm ? 3 : 2;
 
 if (
   selectedCourt === "tenis" &&
-  !isAfterFivePm &&
-  sameDaySameNameReservations.length >= 2
+  tennisCategory === "yetiskin" &&
+  sameDaySamePersonReservations.length >= adultTenisLimit
 ) {
-  alert("Aynı kişi saat 17:00'ye kadar Tenis Kortu için aynı gün en fazla 2 saat rezervasyon yapabilir.");
+  alert(
+    isToday && isAfterFivePm
+      ? "Aynı kişi bugün saat 17:00'den sonra Tenis Kortu için en fazla 3 saat rezervasyon yapabilir."
+      : "Aynı kişi Tenis Kortu için aynı gün en fazla 2 saat rezervasyon yapabilir."
+  );
   return;
 }
 
