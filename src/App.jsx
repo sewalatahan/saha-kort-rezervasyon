@@ -68,8 +68,9 @@ function App() {
     loadClosedSlots();
   }, []);
 
-  async function loadReservations() {
-    const { data, error } = await supabase.rpc("get_reservations");
+  async function loadReservations(role = "") {
+    const rpcName = role === "full" ? "get_admin_reservations" : "get_reservations";
+    const { data, error } = await supabase.rpc(rpcName);
 
     if (error) {
       alert("Rezervasyonlar yüklenemedi: " + error.message);
@@ -111,7 +112,7 @@ function App() {
       return;
     }
 
-    loadReservations();
+    loadReservations("readonly");
   }
 
   async function addNoShowToBlacklist(id) {
@@ -148,7 +149,7 @@ function App() {
     setAdminEmail("");
     setNoShowCandidates([]);
     setBlacklistedPeople([]);
-    loadReservations();
+    loadReservations("");
   }
 
   async function loadClosedSlots() {
@@ -320,7 +321,7 @@ function App() {
     }
 
     alert("Rezervasyon silindi.");
-    loadReservations();
+    loadReservations(adminRole);
   }
 
   async function reserve() {
@@ -487,7 +488,7 @@ function App() {
     setAdminEmail((data.user.email || "").toLocaleLowerCase("en-US"));
     setAdminUsername("");
     setAdminPassword("");
-    await loadReservations();
+    await loadReservations(role);
 
     if (
       (data.user.email || "").toLocaleLowerCase("en-US") ===
