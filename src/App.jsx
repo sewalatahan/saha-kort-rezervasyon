@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import JSZip from "jszip";
 import { supabase } from "./supabase";
-import { courtsSeed, hours, IBAN, ALICI } from "./data/courts";
+import { hours, IBAN, ALICI } from "./data/courts";
 
 import {
   getToday,
@@ -17,6 +17,8 @@ import FacilityCard from "./components/FacilityCard";
 function App() {
   const [reservations, setReservations] = useState([]);
   const [closedSlots, setClosedSlots] = useState([]);
+  const [noShowCandidates, setNoShowCandidates] = useState([]);
+  const [blacklistedPeople, setBlacklistedPeople] = useState([]);
 
   const [selectedCourt, setSelectedCourt] = useState("tenis");
   const [selectedDate, setSelectedDate] = useState(getToday());
@@ -35,6 +37,7 @@ function App() {
   const [adminUsername, setAdminUsername] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminRole, setAdminRole] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminSelectedDate, setAdminSelectedDate] = useState(getToday());
 
@@ -44,15 +47,12 @@ function App() {
   const [closeEnd, setCloseEnd] = useState("14:00");
   const [closeReason, setCloseReason] = useState("Kurs");
 
-  const selectedCourtName =
-    courtsSeed.find((court) => court.id === selectedCourt)?.name || "";
-
   const tennisDayType =
     selectedCourt === "tenis" && selectedTime
       ? getTenisDayType(selectedDate, selectedTime)
       : "";
 
-  const { unitPrice, category, pricingType, dayType } = calculatePricing({
+  const { unitPrice } = calculatePricing({
     selectedCourt,
     volleyLicense,
     tennisCategory,
@@ -69,10 +69,7 @@ function App() {
   }, []);
 
   async function loadReservations() {
-    const { data, error } = await supabase
-      .from("reservations")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.rpc("get_reservations");
 
     if (error) {
       alert("Rezervasyonlar yüklenemedi: " + error.message);
@@ -80,6 +77,78 @@ function App() {
     }
 
     setReservations(data || []);
+  }
+
+  async function loadNoShowCandidates() {
+    const { data, error } = await supabase.rpc("get_no_show_candidates");
+
+    if (error) {
+      alert("Gelmeyen rezervasyonlar yüklenemedi: " + error.message);
+      return;
+    }
+
+    setNoShowCandidates(data || []);
+  }
+
+  async function loadBlacklist() {
+    const { data, error } = await supabase.rpc("get_no_show_blacklist");
+
+    if (error) {
+      alert("Kara liste yüklenemedi: " + error.message);
+      return;
+    }
+
+    setBlacklistedPeople(data || []);
+  }
+
+  async function markReservationArrived(id) {
+    const { error } = await supabase.rpc("mark_reservation_arrived", {
+      p_reservation_id: String(id),
+    });
+
+    if (error) {
+      alert("Geliş kaydedilemedi: " + error.message);
+      return;
+    }
+
+    loadReservations();
+  }
+
+  async function addNoShowToBlacklist(id) {
+    const { error } = await supabase.rpc("add_no_show_to_blacklist", {
+      p_reservation_id: String(id),
+    });
+
+    if (error) {
+      alert("Kara listeye eklenemedi: " + error.message);
+      return;
+    }
+
+    loadNoShowCandidates();
+    loadBlacklist();
+  }
+
+  async function removeNoShowFromBlacklist(phoneNumber) {
+    const { error } = await supabase.rpc("remove_no_show_from_blacklist", {
+      p_phone: phoneNumber,
+    });
+
+    if (error) {
+      alert("Kara listeden çıkarılamadı: " + error.message);
+      return;
+    }
+
+    loadBlacklist();
+  }
+
+  async function logoutAdmin() {
+    await supabase.auth.signOut();
+    setAdminOpen(false);
+    setAdminRole("");
+    setAdminEmail("");
+    setNoShowCandidates([]);
+    setBlacklistedPeople([]);
+    loadReservations();
   }
 
   async function loadClosedSlots() {
@@ -94,12 +163,12 @@ function App() {
   }
 
   async function createClosedSlot() {
-    const { error } = await supabase.from("closed_slots").insert({
-      court_id: closeCourt,
-      close_date: closeDate,
-      start_time: closeStart,
-      end_time: closeEnd,
-      reason: closeReason,
+    const { error } = await supabase.rpc("create_closed_slot", {
+      p_court_id: closeCourt,
+      p_close_date: closeDate,
+      p_start_time: closeStart,
+      p_end_time: closeEnd,
+      p_reason: closeReason,
     });
 
     if (error) {
@@ -112,10 +181,9 @@ function App() {
   }
 
   async function deleteClosedSlot(id) {
-    const { error } = await supabase
-      .from("closed_slots")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.rpc("delete_closed_slot", {
+      p_closed_slot_id: String(id),
+    });
 
     if (error) {
       alert("Kapalı saat silinemedi: " + error.message);
@@ -242,10 +310,9 @@ function App() {
 
     if (!ok) return;
 
-    const { error } = await supabase
-      .from("reservations")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.rpc("delete_reservation", {
+      p_reservation_id: String(id),
+    });
 
     if (error) {
       alert("Rezervasyon silinemedi: " + error.message);
@@ -264,7 +331,7 @@ function App() {
         );
       } else {
         alert(
-          "Tenis Kortu için sadece bugün, yarın ve sonraki gün rezervasyon yapılabilir."
+          "Tenis Kortu için sadece bugün, yarın için rezervasyon yapılabilir."
         );
       }
       return;
@@ -291,107 +358,14 @@ function App() {
     }
 
 
-    const { data: selectedSlotReservations, error: selectedSlotError } = await supabase
-      .from("reservations")
-      .select("id")
-      .eq("reservation_date", selectedDate)
-      .eq("court_id", selectedCourt)
-      .eq("reservation_time", selectedTime);
-
-    if (selectedSlotError) {
-      alert("Saat doluluk kontrolü yapılamadı: " + selectedSlotError.message);
-      return;
-    }
-
-    if ((selectedSlotReservations || []).length > 0) {
-      alert("Bu saat dolu.");
-      return;
-    }
-
     if (closedTimes.includes(selectedTime)) {
       alert("Bu saat kapalı.");
       return;
     }
-const normalizePersonName = (value) =>
-  String(value || "")
-    .trim()
-    .toLocaleUpperCase("tr-TR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ");
-
-const normalizePhone = (value) => {
-  const digits = String(value || "").replace(/\D/g, "");
-
-  if (digits.startsWith("90") && digits.length === 12) {
-    return digits.slice(2);
-  }
-
-  if (digits.startsWith("0") && digits.length === 11) {
-    return digits.slice(1);
-  }
-
-  if (digits.length > 10) {
-    return digits.slice(-10);
-  }
-
-  return digits;
-};
-
-const normalizedName = normalizePersonName(name);
-const normalizedPhone = normalizePhone(phone);
-
-const { data: latestSameDayReservations, error: sameDayError } = await supabase
-  .from("reservations")
-  .select("id, full_name, phone, reservation_date, reservation_time, court_id")
-  .eq("reservation_date", selectedDate)
-  .eq("court_id", selectedCourt);
-
-if (sameDayError) {
-  alert("Rezervasyon kontrolü yapılamadı: " + sameDayError.message);
-  return;
-}
-
-const sameDaySamePersonReservations = (latestSameDayReservations || []).filter(
-  (reservation) => {
-    const reservationName = normalizePersonName(reservation.full_name);
-    const reservationPhone = normalizePhone(reservation.phone);
-
-    return reservationName === normalizedName || reservationPhone === normalizedPhone;
-  }
-);
-
-if (selectedCourt === "salon" && sameDaySamePersonReservations.length >= 1) {
-  alert("Aynı kişi aynı gün Çok Amaçlı Salon için sadece 1 saat rezervasyon yapabilir.");
-  return;
-}
-
-if (
-  selectedCourt === "tenis" &&
-  tennisCategory === "ogrenci" &&
-  sameDaySamePersonReservations.length >= 1
-) {
-  alert("Tenis Kortu için aynı gün sadece 1 saat rezervasyon yapılabilir.");
-  return;
-}
-
-const isToday = selectedDate === getToday();
-const currentHour = new Date().getHours();
-const isAfterFivePm = currentHour >= 17;
-const adultTenisLimit = isToday && isAfterFivePm ? 3 : 2;
-
-if (
-  selectedCourt === "tenis" &&
-  tennisCategory === "yetiskin" &&
-  sameDaySamePersonReservations.length >= adultTenisLimit
-) {
-  alert(
-    isToday && isAfterFivePm
-      ? "Aynı kişi bugün saat 17:00'den sonra Tenis Kortu için en fazla 3 saat rezervasyon yapabilir."
-      : "Aynı kişi Tenis Kortu için aynı gün en fazla 2 saat rezervasyon yapabilir."
-  );
-  return;
-}
+    if (reservedTimes.includes(selectedTime)) {
+      alert("Bu saat dolu.");
+      return;
+    }
 
     if (!receiptFile) {
       alert(
@@ -423,23 +397,36 @@ if (
       return;
     }
 
-    const { error } = await supabase.from("reservations").insert({
-      court_id: selectedCourt,
-      court_name: selectedCourtName,
-      reservation_date: selectedDate,
-      reservation_time: selectedTime,
-      full_name: name,
-      phone,
-      person_count: Number(personCount),
-      category,
-      pricing_type: pricingType,
-      day_type: dayType,
-      unit_price: unitPrice,
-      total_price: totalPrice,
-      receipt_url: filePath,
-      receipt_name: receiptFile.name,
-      is_approved: false,
-    });
+    const { data: reservationResult, error } = await supabase.rpc(
+      "create_reservation",
+      {
+        p_court_id: selectedCourt,
+        p_reservation_date: selectedDate,
+        p_reservation_time: selectedTime,
+        p_full_name: name,
+        p_phone: phone,
+        p_person_count: Number(personCount),
+        p_category: selectedCourt === "tenis" ? tennisCategory : volleyLicense,
+        p_receipt_url: filePath,
+        p_receipt_name: receiptFile.name,
+      }
+    );
+
+    if (!error && reservationResult !== "ok") {
+      const resultMessages = {
+        invalid_contact: "Lütfen geçerli ad soyad ve telefon bilgisi giriniz.",
+        invalid_date: "Seçilen tarih için rezervasyon yapılamaz.",
+        invalid_court: "Seçilen tesis geçersiz.",
+        invalid_category: "Seçilen kategori geçersiz.",
+        invalid_reservation: "Rezervasyon bilgileri geçersiz.",
+        slot_taken: "Bu saat dolu.",
+        slot_closed: "Bu saat kapalı.",
+        reservation_limit:
+          "Bu kişi için aynı tesis ve tarihteki rezervasyon sınırına ulaşıldı.",
+      };
+      alert(resultMessages[reservationResult] || "Rezervasyon oluşturulamadı.");
+      return;
+    }
 
     if (error) {
       alert("Rezervasyon kaydedilemedi: " + error.message);
@@ -457,28 +444,56 @@ if (
     loadReservations();
   }
 
-  function loginAdmin() {
-    const users = {
-      "EBRU.ERDEMIR": { password: "12345.eE", role: "full" },
-      "SEVVAL.ATAHAN": { password: "12345.sA", role: "full" },
-      "GUVENLIK": { password: "12345.tA", role: "readonly" },
-    };
-
+   async function loginAdmin() {
     const username = adminUsername
       .trim()
       .toLocaleUpperCase("tr-TR")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-    const user = users[username];
+    const usernameToEmail = {
+      "EBRU.ERDEMIR": "ebru.erdemir@saha-kort.local",
+      "SEVVAL.ATAHAN": "sevval.atahan@saha-kort.local",
+      "GUVENLIK": "guvenlik@saha-kort.local",
+    };
 
-    if (user && user.password === adminPassword) {
-      setAdminOpen(true);
-      setAdminRole(user.role);
-      setAdminUsername("");
-      setAdminPassword("");
-    } else {
+    const email = usernameToEmail[username];
+
+    if (!email || !adminPassword) {
       alert("Kullanıcı adı veya parola yanlış.");
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: adminPassword,
+    });
+
+    if (error || !data.user) {
+      alert("Kullanıcı adı veya parola yanlış.");
+      return;
+    }
+
+    const role = data.user.app_metadata?.role;
+
+    if (role !== "full" && role !== "readonly") {
+      await supabase.auth.signOut();
+      alert("Bu hesabın yönetici yetkisi bulunmuyor.");
+      return;
+    }
+
+    setAdminOpen(true);
+    setAdminRole(role);
+    setAdminEmail((data.user.email || "").toLocaleLowerCase("en-US"));
+    setAdminUsername("");
+    setAdminPassword("");
+    await loadReservations();
+
+    if (
+      (data.user.email || "").toLocaleLowerCase("en-US") ===
+      "sevval.atahan@saha-kort.local"
+    ) {
+      await Promise.all([loadNoShowCandidates(), loadBlacklist()]);
     }
   }
 
@@ -541,12 +556,11 @@ if (
         <AdminPanel
           adminOpen={adminOpen}
           adminRole={adminRole}
+          isSevval={adminEmail === "sevval.atahan@saha-kort.local"}
           adminUsername={adminUsername}
           adminPassword={adminPassword}
           setAdminUsername={setAdminUsername}
           setAdminPassword={setAdminPassword}
-          setAdminOpen={setAdminOpen}
-          setAdminRole={setAdminRole}
           loginAdmin={loginAdmin}
           closeCourt={closeCourt}
           setCloseCourt={setCloseCourt}
@@ -568,6 +582,12 @@ if (
           deleteClosedSlot={deleteClosedSlot}
           deleteReservation={deleteReservation}
           openReceipt={openReceipt}
+          markReservationArrived={markReservationArrived}
+          noShowCandidates={noShowCandidates}
+          blacklistedPeople={blacklistedPeople}
+          addNoShowToBlacklist={addNoShowToBlacklist}
+          removeNoShowFromBlacklist={removeNoShowFromBlacklist}
+          logoutAdmin={logoutAdmin}
         />
       </div>
     );

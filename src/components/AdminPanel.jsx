@@ -1,16 +1,16 @@
 import { useMemo, useState } from "react";
 import { courtsSeed, hours } from "../data/courts";
+import { getToday } from "../utils/dateRules";
 
 
 function AdminPanel({
   adminOpen,
   adminRole,
+  isSevval,
   adminUsername,
   adminPassword,
   setAdminUsername,
   setAdminPassword,
-  setAdminOpen,
-  setAdminRole,
   loginAdmin,
 
   closeCourt,
@@ -34,6 +34,12 @@ function AdminPanel({
   deleteClosedSlot,
   deleteReservation,
   openReceipt,
+  markReservationArrived,
+  noShowCandidates,
+  blacklistedPeople,
+  addNoShowToBlacklist,
+  removeNoShowFromBlacklist,
+  logoutAdmin,
 }) {
   const [monthlyReportMonth, setMonthlyReportMonth] = useState(
     adminSelectedDate.slice(0, 7)
@@ -130,16 +136,39 @@ function AdminPanel({
       <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
         <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
         <br />
-        {r.full_name} | {r.phone}
-        <br />
-        Kişi: {r.person_count} | {r.pricing_type} | {r.total_price} TL
-        <br />
-        Dekont: {r.receipt_name}
+        {r.full_name}
+
+        {adminRole === "readonly" && (
+          <>
+            <br />
+            Durum: {r.arrived ? "Geldi" : "Bekleniyor"}
+          </>
+        )}
+
+        {adminRole === "full" && (
+          <>
+            {" "}| {r.phone}
+            <br />
+            Kişi: {r.person_count} | {r.pricing_type} | {r.total_price} TL
+            <br />
+            Dekont: {r.receipt_name}
+          </>
+        )}
 
         <div style={{ marginTop: 8 }}>
-          <button onClick={() => openReceipt(r.receipt_url)}>
-            Dekontu Aç
-          </button>
+          {adminRole === "readonly" &&
+            !r.arrived &&
+            r.reservation_date === getToday() && (
+              <button onClick={() => markReservationArrived(r.id)}>
+                Geldi olarak işaretle
+              </button>
+            )}
+
+          {adminRole === "full" && (
+            <button onClick={() => openReceipt(r.receipt_url)}>
+              Dekontu Aç
+            </button>
+          )}
 
           {adminRole === "full" && (
             <button
@@ -200,13 +229,7 @@ function AdminPanel({
         </div>
       ) : (
         <div>
-          <button
-            onClick={() => {
-              setAdminOpen(false);
-              setAdminRole("");
-            }}
-            style={{ marginBottom: 20 }}
-          >
+          <button onClick={logoutAdmin} style={{ marginBottom: 20 }}>
             Oturumu Kapat
           </button>
 
@@ -335,7 +358,56 @@ function AdminPanel({
             </div>
           ))}
 
-          <div style={{ marginTop: 30, marginBottom: 20 }}>
+          {isSevval && adminRole === "full" && (
+            <section style={{ marginTop: 30 }}>
+              <h3>Gelmeyen Rezervasyonlar</h3>
+              {noShowCandidates.length === 0 ? (
+                <p>İncelenecek gelmeyen rezervasyon yok.</p>
+              ) : (
+                noShowCandidates.map((reservation) => (
+                  <div
+                    key={reservation.id}
+                    style={{ padding: 12, borderBottom: "1px solid #ddd" }}
+                  >
+                    <strong>{reservation.full_name}</strong> | {reservation.phone}
+                    <br />
+                    {reservation.reservation_date} | {reservation.reservation_time} |{" "}
+                    {reservation.court_name}
+                    <br />
+                    <button
+                      onClick={() => addNoShowToBlacklist(reservation.id)}
+                      style={{ marginTop: 8 }}
+                    >
+                      Kara listeye ekle
+                    </button>
+                  </div>
+                ))
+              )}
+
+              <h3 style={{ marginTop: 24 }}>Kara Liste</h3>
+              {blacklistedPeople.length === 0 ? (
+                <p>Kara listede kişi yok.</p>
+              ) : (
+                blacklistedPeople.map((person) => (
+                  <div
+                    key={person.phone}
+                    style={{ padding: 12, borderBottom: "1px solid #ddd" }}
+                  >
+                    <strong>{person.full_name}</strong> | {person.phone}
+                    <button
+                      onClick={() => removeNoShowFromBlacklist(person.phone)}
+                      style={{ marginLeft: 12 }}
+                    >
+                      Listeden çıkar
+                    </button>
+                  </div>
+                ))
+              )}
+            </section>
+          )}
+
+          {adminRole === "full" && (
+            <div style={{ marginTop: 30, marginBottom: 20 }}>
             <button
               onClick={() => setShowMonthlyReport(!showMonthlyReport)}
               style={{
@@ -445,7 +517,8 @@ function AdminPanel({
                 ))}
               </div>
             )}
-          </div>
+            </div>
+          )}
 
           <h3 style={{ marginTop: 30 }}>Rezervasyonlar</h3>
 

@@ -1,28 +1,44 @@
+function getIstanbulDate(date = new Date()) {
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return date;
+  }
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Istanbul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+function addDays(dateText, dayCount) {
+  const date = new Date(`${dateText}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + dayCount);
+  return date.toISOString().slice(0, 10);
+}
+
 export function getToday() {
-  return new Date().toISOString().slice(0, 10);
+  return getIstanbulDate();
 }
 
 export function getWeekRange(date = new Date()) {
-  const current = new Date(date);
-  const day = current.getDay();
+  const currentDate = getIstanbulDate(date);
+  const current = new Date(`${currentDate}T00:00:00Z`);
+  const day = current.getUTCDay();
   const diffToMonday = day === 0 ? -6 : 1 - day;
-
-  const monday = new Date(current);
-  monday.setDate(current.getDate() + diffToMonday);
-
-  const sunday = new Date(monday);
-  sunday.setDate(monday.getDate() + 6);
+  const start = addDays(currentDate, diffToMonday);
 
   return {
-    start: monday.toISOString().slice(0, 10),
-    end: sunday.toISOString().slice(0, 10),
+    start,
+    end: addDays(start, 6),
   };
 }
 
 export function getMaxTenisDate() {
-  const date = new Date();
-  date.setDate(date.getDate() + 2);
-  return date.toISOString().slice(0, 10);
+  return addDays(getToday(), 1);
 }
 
 export function isDateAllowed(courtId, dateText) {
