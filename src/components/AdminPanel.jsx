@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { courtsSeed, hours } from "../data/courts";
 import { getToday } from "../utils/dateRules";
 
-
 function AdminPanel({
   adminOpen,
   adminRole,
@@ -135,11 +134,12 @@ function AdminPanel({
     return (
       <div key={r.id} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
         <strong>{r.reservation_date}</strong> | {r.reservation_time} | {r.court_name}
-        <br />
-        {r.full_name}
 
         {adminRole === "readonly" && (
           <>
+            <br />
+            <strong>{r.full_name || "İsim bilgisi yok"}</strong>
+            {r.phone ? ` | ${r.phone}` : " | Telefon bilgisi yok"}
             <br />
             Durum: {r.arrived ? "Geldi" : "Bekleniyor"}
           </>
@@ -147,7 +147,8 @@ function AdminPanel({
 
         {adminRole === "full" && (
           <>
-            {" "}| {r.phone}
+            <br />
+            {r.full_name} | {r.phone}
             <br />
             Kişi: {r.person_count} | {r.pricing_type} | {r.total_price} TL
             <br />
@@ -165,25 +166,24 @@ function AdminPanel({
             )}
 
           {adminRole === "full" && (
-            <button onClick={() => openReceipt(r.receipt_url)}>
-              Dekontu Aç
-            </button>
-          )}
-
-          {adminRole === "full" && (
-            <button
-              onClick={() => deleteReservation(r.id)}
-              style={{
-                marginLeft: 8,
-                background: "#991b1b",
-                color: "white",
-                border: "none",
-                padding: "6px 10px",
-                borderRadius: 6,
-              }}
-            >
-              Rezervasyonu Sil
-            </button>
+            <>
+              <button onClick={() => openReceipt(r.receipt_url)}>
+                Dekontu Aç
+              </button>
+              <button
+                onClick={() => deleteReservation(r.id)}
+                style={{
+                  marginLeft: 8,
+                  background: "#991b1b",
+                  color: "white",
+                  border: "none",
+                  padding: "6px 10px",
+                  borderRadius: 6,
+                }}
+              >
+                Rezervasyonu Sil
+              </button>
+            </>
           )}
         </div>
       </div>

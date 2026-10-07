@@ -14,6 +14,33 @@ import { calculatePricing } from "./utils/pricing";
 import AdminPanel from "./components/AdminPanel";
 import FacilityCard from "./components/FacilityCard";
 
+const normalizeReservationDate = (value) => String(value ?? "").slice(0, 10);
+const normalizeReservationTime = (value) => String(value ?? "").slice(0, 5);
+const normalizeCourtId = (value) => String(value ?? "").trim().toLocaleLowerCase("en-US");
+
+const adminUserMap = Object.fromEntries(
+  (import.meta.env.VITE_ADMIN_USERS || "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .map((entry) => {
+      const [username, email] = entry.split(":").map((part) => part.trim());
+      if (!username || !email) return null;
+
+      return [
+        username
+          .toLocaleUpperCase("tr-TR")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, ""),
+        email.toLocaleLowerCase("en-US"),
+      ];
+    })
+    .filter(Boolean)
+);
+
+const sevvalAdminEmail =
+  (import.meta.env.VITE_SEVVAL_EMAIL || "sevval.atahan@saha-kort.local").toLocaleLowerCase("en-US");
+
 function App() {
   const [reservations, setReservations] = useState([]);
   const [closedSlots, setClosedSlots] = useState([]);
@@ -69,7 +96,12 @@ function App() {
   }, []);
 
   async function loadReservations(role = "") {
-    const rpcName = role === "full" ? "get_admin_reservations" : "get_reservations";
+    const rpcName =
+      role === "full"
+        ? "get_admin_reservations"
+        : role === "readonly"
+          ? "get_security_reservations"
+          : "get_reservations";
     const { data, error } = await supabase.rpc(rpcName);
 
     if (error) {
@@ -198,10 +230,10 @@ function App() {
     return reservations
       .filter(
         (reservation) =>
-          reservation.court_id === selectedCourt &&
-          reservation.reservation_date === selectedDate
+          normalizeCourtId(reservation.court_id) === normalizeCourtId(selectedCourt) &&
+          normalizeReservationDate(reservation.reservation_date) === selectedDate
       )
-      .map((reservation) => reservation.reservation_time);
+      .map((reservation) => normalizeReservationTime(reservation.reservation_time));
   }, [reservations, selectedCourt, selectedDate]);
 
  const closedTimes = useMemo(() => {
@@ -211,10 +243,10 @@ function App() {
 
     const isManuallyClosed = closedSlots.some((slot) => {
       return (
-        slot.court_id === selectedCourt &&
-        slot.close_date === selectedDate &&
-        hour >= slot.start_time &&
-        hour <= slot.end_time
+        normalizeCourtId(slot.court_id) === normalizeCourtId(selectedCourt) &&
+        normalizeReservationDate(slot.close_date) === selectedDate &&
+        hour >= normalizeReservationTime(slot.start_time) &&
+        hour <= normalizeReservationTime(slot.end_time)
       );
     });
 
@@ -430,11 +462,17 @@ function App() {
     }
 
     if (error) {
-      alert("Rezervasyon kaydedilemedi: " + error.message);
+      if (error.code === "23505") {
+        alert(
+          "Bu saat az önce başka bir kullanıcı tarafından rezerve edildi. Lütfen başka bir saat seçiniz."
+        );
+      } else {
+        alert("Rezervasyon kaydedilemedi. Lütfen tekrar deneyiniz.");
+      }
       return;
     }
 
-    alert("Rezervasyon oluşturuldu. Dekont yönetici tarafından kontrol edilecektir.");
+    alert("Rezervasyonunuz oluşturulmuştur.");
 
     setSelectedTime("");
     setName("");
@@ -442,7 +480,7 @@ function App() {
     setPersonCount(1);
     setReceiptFile(null);
 
-    loadReservations();
+    await loadReservations();
   }
 
    async function loginAdmin() {
@@ -452,13 +490,7 @@ function App() {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-    const usernameToEmail = {
-      "EBRU.ERDEMIR": "ebru.erdemir@saha-kort.local",
-      "SEVVAL.ATAHAN": "sevval.atahan@saha-kort.local",
-      "GUVENLIK": "guvenlik@saha-kort.local",
-    };
-
-    const email = usernameToEmail[username];
+    const email = adminUserMap[username];
 
     if (!email || !adminPassword) {
       alert("Kullanıcı adı veya parola yanlış.");
@@ -490,10 +522,7 @@ function App() {
     setAdminPassword("");
     await loadReservations(role);
 
-    if (
-      (data.user.email || "").toLocaleLowerCase("en-US") ===
-      "sevval.atahan@saha-kort.local"
-    ) {
+    if ((data.user.email || "").toLocaleLowerCase("en-US") === sevvalAdminEmail) {
       await Promise.all([loadNoShowCandidates(), loadBlacklist()]);
     }
   }
@@ -502,7 +531,6 @@ function App() {
     const newCourt = e.target.value;
     setSelectedCourt(newCourt);
     setSelectedTime("");
-
     if (!isDateAllowed(newCourt, selectedDate)) {
       setSelectedDate(getToday());
     }
@@ -557,7 +585,7 @@ function App() {
         <AdminPanel
           adminOpen={adminOpen}
           adminRole={adminRole}
-          isSevval={adminEmail === "sevval.atahan@saha-kort.local"}
+          isSevval={adminEmail === sevvalAdminEmail}
           adminUsername={adminUsername}
           adminPassword={adminPassword}
           setAdminUsername={setAdminUsername}
