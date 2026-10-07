@@ -44,6 +44,13 @@ const sevvalAdminEmail =
   (import.meta.env.VITE_SEVVAL_EMAIL || "sevval.atahan@saha-kort.local").toLocaleLowerCase("en-US");
 
 function App() {
+  const [showPaymentNotice, setShowPaymentNotice] = useState(true);
+  const paymentNoticeRef = useRef(null);
+
+  useEffect(() => {
+    if (showPaymentNotice) paymentNoticeRef.current?.showModal();
+  }, [showPaymentNotice]);
+
   const reservationRequestId = useRef(0);
   const [reservations, setReservations] = useState([]);
   const [closedSlots, setClosedSlots] = useState([]);
@@ -638,6 +645,79 @@ function App() {
         color: "#0f172a",
       }}
     >
+      {showPaymentNotice && (
+        <>
+          <style>{`
+            .payment-notice::backdrop { background: rgba(15, 23, 42, 0.45); }
+          `}</style>
+          <dialog
+            ref={paymentNoticeRef}
+            className="payment-notice"
+            aria-labelledby="payment-notice-title"
+            aria-describedby="payment-notice-description"
+            onCancel={() => setShowPaymentNotice(false)}
+            style={{
+              width: "calc(100% - 32px)",
+              maxWidth: 480,
+              maxHeight: "calc(100dvh - 32px)",
+              boxSizing: "border-box",
+              margin: "auto",
+              padding: "56px 24px 24px",
+              border: "none",
+              borderRadius: 16,
+              background: "#fff",
+              color: "#0f172a",
+              boxShadow: "0 20px 60px rgba(0, 0, 0, 0.25)",
+              textAlign: "center",
+              lineHeight: 1.6,
+              overflowY: "auto",
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Bilgilendirmeyi kapat"
+              onClick={() => setShowPaymentNotice(false)}
+              style={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                width: 44,
+                height: 44,
+                border: "none",
+                borderRadius: 8,
+                background: "#f1f5f9",
+                color: "#334155",
+                fontSize: 22,
+                cursor: "pointer",
+              }}
+            >
+              X
+            </button>
+            <h2
+              id="payment-notice-title"
+              style={{ color: "#92400e", fontSize: "clamp(18px, 4.5vw, 22px)", lineHeight: 1.4, margin: "0 0 20px", fontWeight: 700 }}
+            >
+              ⚠️ ÖNEMLİ ÖDEME BİLGİLENDİRMESİ
+            </h2>
+            <div id="payment-notice-description" style={{ fontSize: 16 }}>
+              <p>Banka açıklama kısmına mutlaka aşağıdaki bilgileri yazınız:</p>
+              <strong
+                style={{ display: "block", margin: "20px 0", padding: 16, borderRadius: 10, border: "1px solid #f59e0b", background: "#fffbeb", color: "#92400e", fontSize: 18, fontWeight: 800 }}
+              >
+                Ad Soyad + Tesis Adı + Tarih + Saat
+              </strong>
+              <p>Lütfen ödeme yaparken bu bilgileri eksiksiz belirtiniz.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPaymentNotice(false)}
+              style={{ width: "100%", marginTop: 24, padding: "12px 20px", border: "none", borderRadius: 10, background: "#0b2f6b", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}
+            >
+              Anladım
+            </button>
+          </dialog>
+        </>
+      )}
       <div
         style={{
           display: "flex",
