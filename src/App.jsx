@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import JSZip from "jszip";
 import { supabase } from "./supabase";
 import { hours, IBAN, ALICI } from "./data/courts";
@@ -18,8 +18,10 @@ const normalizeReservationDate = (value) => String(value ?? "").slice(0, 10);
 const normalizeReservationTime = (value) => String(value ?? "").slice(0, 5);
 const normalizeCourtId = (value) => String(value ?? "").trim().toLocaleLowerCase("en-US");
 
+const defaultAdminUsers =
+  "EBRU.ERDEMIR:ebru.erdemir@saha-kort.local,SEVVAL.ATAHAN:sevval.atahan@saha-kort.local,GUVENLIK:guvenlik@saha-kort.local";
 const adminUserMap = Object.fromEntries(
-  (import.meta.env.VITE_ADMIN_USERS || "")
+  (import.meta.env.VITE_ADMIN_USERS || defaultAdminUsers)
     .split(",")
     .map((entry) => entry.trim())
     .filter(Boolean)
@@ -42,6 +44,7 @@ const sevvalAdminEmail =
   (import.meta.env.VITE_SEVVAL_EMAIL || "sevval.atahan@saha-kort.local").toLocaleLowerCase("en-US");
 
 function App() {
+  const reservationRequestId = useRef(0);
   const [reservations, setReservations] = useState([]);
   const [closedSlots, setClosedSlots] = useState([]);
   const [noShowCandidates, setNoShowCandidates] = useState([]);
@@ -96,6 +99,7 @@ function App() {
   }, []);
 
   async function loadReservations(role = "") {
+    const requestId = ++reservationRequestId.current;
     const rpcName =
       role === "full"
         ? "get_admin_reservations"
@@ -103,6 +107,8 @@ function App() {
           ? "get_security_reservations"
           : "get_reservations";
     const { data, error } = await supabase.rpc(rpcName);
+
+    if (requestId !== reservationRequestId.current) return;
 
     if (error) {
       alert("Rezervasyonlar yüklenemedi: " + error.message);
@@ -480,7 +486,7 @@ function App() {
     setPersonCount(1);
     setReceiptFile(null);
 
-    await loadReservations();
+    await loadReservations(adminRole);
   }
 
    async function loginAdmin() {
