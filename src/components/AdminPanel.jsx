@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { courtsSeed, hours } from "../data/courts";
 import { getToday } from "../utils/dateRules";
+import { createNoShowWorkbook, getYesterday, groupNoShows } from "../utils/noShowReport";
 
 function AdminPanel({
   adminOpen,
@@ -45,6 +46,45 @@ function AdminPanel({
   );
   const [monthlyReportCourt, setMonthlyReportCourt] = useState("all");
   const [showMonthlyReport, setShowMonthlyReport] = useState(false);
+  const [reportToday, setReportToday] = useState(getToday);
+  const [exportingNoShows, setExportingNoShows] = useState(false);
+
+  useEffect(() => {
+    const refreshDate = () => setReportToday(getToday());
+    const timer = setInterval(refreshDate, 30000);
+    window.addEventListener("focus", refreshDate);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refreshDate);
+    };
+  }, []);
+
+  const yesterdayNoShows = noShowCandidates.filter(
+    (r) => String(r.reservation_date ?? "").slice(0, 10) === getYesterday(reportToday)
+  );
+  const noShowHistory = useMemo(
+    () => isSevval && adminRole === "full" ? groupNoShows(reservations, reportToday) : [],
+    [reservations, reportToday, isSevval, adminRole]
+  );
+
+  async function downloadNoShowReport() {
+    setExportingNoShows(true);
+    try {
+      const blob = await createNoShowWorkbook(noShowHistory);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `gelmeme-raporu-${getToday()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      alert("Excel raporu oluşturulamadı. Lütfen tekrar deneyiniz.");
+    } finally {
+      setExportingNoShows(false);
+    }
+  }
 
   function getReservationMonth(reservationDate) {
     if (!reservationDate) return "";
@@ -360,11 +400,12 @@ function AdminPanel({
 
           {isSevval && adminRole === "full" && (
             <section style={{ marginTop: 30 }}>
-              <h3>Gelmeyen Rezervasyonlar</h3>
-              {noShowCandidates.length === 0 ? (
-                <p>İncelenecek gelmeyen rezervasyon yok.</p>
+              <details>
+              <summary style={{ cursor: "pointer", fontWeight: "bold" }}>Dün Gelmeyenler</summary>
+              {yesterdayNoShows.length === 0 ? (
+                <p>Dün gelmeyen rezervasyon yok.</p>
               ) : (
-                noShowCandidates.map((reservation) => (
+                yesterdayNoShows.map((reservation) => (
                   <div
                     key={reservation.id}
                     style={{ padding: 12, borderBottom: "1px solid #ddd" }}
@@ -372,7 +413,7 @@ function AdminPanel({
                     <strong>{reservation.full_name}</strong> | {reservation.phone}
                     <br />
                     {reservation.reservation_date} | {reservation.reservation_time} |{" "}
-                    {reservation.court_name}
+                    {reservation.court_name || reservation.court_id}
                     <br />
                     <button
                       onClick={() => addNoShowToBlacklist(reservation.id)}
@@ -384,7 +425,26 @@ function AdminPanel({
                 ))
               )}
 
-              <h3 style={{ marginTop: 24 }}>Kara Liste</h3>
+              </details>
+
+              <details style={{ marginTop: 24 }}>
+                <summary style={{ cursor: "pointer", fontWeight: "bold" }}>Gelmeme Geçmişi</summary>
+                <button onClick={downloadNoShowReport} disabled={exportingNoShows || noShowHistory.length === 0} style={{ marginTop: 12 }}>
+                  {exportingNoShows ? "Excel hazırlanıyor…" : "Excel İndir"}
+                </button>
+                {noShowHistory.length === 0 ? <p>Geçmiş gelmeme kaydı yok.</p> : noShowHistory.map((person) => (
+                  <div key={person.key} style={{ padding: 12, borderBottom: "1px solid #ddd" }}>
+                    <strong>{person.fullName || "İsim bilgisi yok"}</strong>
+                    <br />Telefon: {person.phone}
+                    <br />Toplam gelmeme sayısı: {person.count}
+                    <br />Son gelmediği tarih: {person.lastDate}
+                    <br />Gelmediği tarihler: {person.dates.join(", ")}
+                  </div>
+                ))}
+              </details>
+
+              <details style={{ marginTop: 24 }}>
+              <summary style={{ cursor: "pointer", fontWeight: "bold" }}>Kara Liste</summary>
               {blacklistedPeople.length === 0 ? (
                 <p>Kara listede kişi yok.</p>
               ) : (
@@ -403,6 +463,7 @@ function AdminPanel({
                   </div>
                 ))
               )}
+              </details>
             </section>
           )}
 
