@@ -786,7 +786,7 @@ function App() {
       >
         {selectedCourt === "salon"
           ? "Çok Amaçlı Salon için sadece bulunduğunuz hafta içinde rezervasyon yapılabilir."
-          : "Tenis Kortu için sadece bugün, yarın ve sonraki gün rezervasyon yapılabilir."}
+          : "Tenis Kortu için sadece bugün ve yarın rezervasyon yapılabilir."}
       </div>
 
       <h3 style={{ color: "#0b2f6b", marginBottom: 12 }}>Uygun Saatler</h3>
