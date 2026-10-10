@@ -52,6 +52,8 @@ function App() {
   }, [showPaymentNotice]);
 
   const reservationRequestId = useRef(0);
+  const reservationInFlight = useRef(false);
+  const [isReserving, setIsReserving] = useState(false);
   const [reservations, setReservations] = useState([]);
   const [closedSlots, setClosedSlots] = useState([]);
   const [noShowCandidates, setNoShowCandidates] = useState([]);
@@ -370,6 +372,20 @@ function App() {
   }
 
   async function reserve() {
+    if (reservationInFlight.current) return;
+    reservationInFlight.current = true;
+    setIsReserving(true);
+    try {
+      await submitReservation();
+    } catch {
+      alert("Rezervasyon işlemi tamamlanamadı. Lütfen listeyi kontrol edip tekrar deneyiniz.");
+    } finally {
+      reservationInFlight.current = false;
+      setIsReserving(false);
+    }
+  }
+
+  async function submitReservation() {
     if (!isDateAllowed(selectedCourt, selectedDate)) {
       if (selectedCourt === "salon") {
         alert(
@@ -470,12 +486,18 @@ function App() {
         reservation_limit:
           "Bu kişi için aynı tesis ve tarihteki rezervasyon sınırına ulaşıldı.",
       };
+      if (reservationResult === "slot_taken") {
+        setSelectedTime("");
+        await loadReservations(adminRole);
+      }
       alert(resultMessages[reservationResult] || "Rezervasyon oluşturulamadı.");
       return;
     }
 
     if (error) {
       if (error.code === "23505") {
+        setSelectedTime("");
+        await loadReservations(adminRole);
         alert(
           "Bu saat az önce başka bir kullanıcı tarafından rezerve edildi. Lütfen başka bir saat seçiniz."
         );
@@ -1088,6 +1110,7 @@ function App() {
 
         <button
           onClick={reserve}
+          disabled={isReserving}
           style={{
             padding: 12,
             background: "black",
@@ -1097,7 +1120,7 @@ function App() {
             width: "100%",
           }}
         >
-          Rezervasyon Yap
+          {isReserving ? "Rezervasyon kaydediliyor…" : "Rezervasyon Yap"}
         </button>
       </div>
 
