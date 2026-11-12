@@ -181,6 +181,10 @@ function AdminPanel({
             <strong>{r.full_name || "İsim bilgisi yok"}</strong>
             {r.phone ? ` | ${r.phone}` : " | Telefon bilgisi yok"}
             <br />
+            Kişi sayısı: {r.person_count ?? "Bilgi yok"}
+            <br />
+            Kategori: {({ ogrenci: "Öğrenci", yetiskin: "Normal (Yetişkin)", lisanssiz: "Normal (Lisanssız)", lisansli: "Lisanslı" })[r.category] || "Bilgi yok"}
+            <br />
             Durum: {r.arrived ? "Geldi" : "Bekleniyor"}
           </>
         )}
